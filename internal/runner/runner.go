@@ -47,9 +47,15 @@ func (r *Runner) Dispatch(ctx context.Context, event provider.WebhookEvent) {
 
 // Run executes the full job: generate token → clone → zigzag → cleanup.
 func (r *Runner) Run(ctx context.Context, event provider.WebhookEvent) error {
+	log.Printf("runner: starting job repo=%s branch=%s commit=%s", event.RepoName, event.Branch, event.CommitSHA)
+
 	token, err := r.cloner.GenerateCloneToken(ctx, event.InstallationID)
 	if err != nil {
 		return fmt.Errorf("generate clone token: %w", err)
+	}
+
+	if err := os.MkdirAll(r.cfg.WorkspaceDir, 0o755); err != nil {
+		return fmt.Errorf("create workspace dir: %w", err)
 	}
 
 	workDir, err := os.MkdirTemp(r.cfg.WorkspaceDir, "job-*")
@@ -63,11 +69,14 @@ func (r *Runner) Run(ctx context.Context, event provider.WebhookEvent) error {
 		return fmt.Errorf("clone repo: %w", err)
 	}
 
+	log.Printf("runner: running zigzag repo=%s reports=%s", event.RepoName, r.cfg.ReportsDir)
 	cmd := exec.CommandContext(ctx, r.cfg.ZigzagBin, "run", "--output-dir", r.cfg.ReportsDir)
 	cmd.Dir = repoDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("zigzag run: %w: %s", err, out)
 	}
 
+	log.Printf("runner: job complete repo=%s branch=%s commit=%s reports=%s",
+		event.RepoName, event.Branch, event.CommitSHA, r.cfg.ReportsDir)
 	return nil
 }

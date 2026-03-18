@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/LegationPro/zagforge-mvp-impl/internal/provider"
@@ -58,21 +59,27 @@ func (h *WebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	event, err := h.validator.ValidateWebhook(r.Context(), body, signature, r.Header.Get("X-GitHub-Event"))
+	eventType := r.Header.Get("X-GitHub-Event")
+	event, err := h.validator.ValidateWebhook(r.Context(), body, signature, eventType)
 	if errors.Is(err, provider.ErrInvalidSignature) {
+		log.Printf("webhook: invalid signature event=%s", eventType)
 		http.Error(w, "invalid signature", http.StatusUnauthorized)
 		return
 	}
 	if err != nil {
+		log.Printf("webhook: validation error event=%s: %v", eventType, err)
 		http.Error(w, "validation error", http.StatusInternalServerError)
 		return
 	}
 
 	if !supportedEvents[event.EventType] {
+		log.Printf("webhook: ignoring unsupported event=%s", event.EventType)
 		w.WriteHeader(http.StatusOK)
 		return
 	}
 
+	log.Printf("webhook: dispatching event=%s repo=%s branch=%s commit=%s",
+		event.EventType, event.RepoName, event.Branch, event.CommitSHA)
 	h.dispatcher.Dispatch(context.Background(), event)
 	w.WriteHeader(http.StatusOK)
 }
