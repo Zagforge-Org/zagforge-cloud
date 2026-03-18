@@ -11,10 +11,10 @@ import (
 	"github.com/LegationPro/zagforge-mvp-impl/internal/config"
 	"github.com/LegationPro/zagforge-mvp-impl/internal/handler"
 	"github.com/LegationPro/zagforge-mvp-impl/internal/provider"
+	"github.com/LegationPro/zagforge-mvp-impl/internal/runner"
 	"github.com/go-chi/chi/v5"
 )
 
-// This is a test
 func main() {
 	c, err := config.Load()
 	if err != nil {
@@ -27,14 +27,19 @@ func main() {
 	}
 
 	ch := provider.NewClientHandler(client)
-	wh := handler.NewWebhookHandler(ch)
+	run := runner.New(ch, runner.Config{
+		WorkspaceDir: c.Worker.WorkspaceDir,
+		ZigzagBin:    c.Worker.ZigzagBin,
+		ReportsDir:   c.Worker.ReportsDir,
+	})
+	wh := handler.NewWebhookHandler(ch, run)
 
-	r := chi.NewRouter()
-	r.Post("/internal/webhooks/github", wh.ServeHTTP)
+	mux := chi.NewRouter()
+	mux.Post("/internal/webhooks/github", wh.ServeHTTP)
 
 	srv := &http.Server{
 		Addr:    ":" + c.Server.Port,
-		Handler: r,
+		Handler: mux,
 	}
 
 	go func() {
