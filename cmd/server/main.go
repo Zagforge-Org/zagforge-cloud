@@ -62,5 +62,8 @@ func main() {
 		log.Fatalf("server shutdown failed: %v", err)
 	}
 
+	log.Println("waiting for in-flight jobs to complete...")
+	run.Wait()
+
 	log.Println("server stopped")
 }
