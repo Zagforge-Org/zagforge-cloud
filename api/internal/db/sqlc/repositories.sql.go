@@ -30,6 +30,67 @@ func (q *Queries) GetRepoByGithubID(ctx context.Context, githubRepoID int64) (Re
 	return i, err
 }
 
+const getRepoByID = `-- name: GetRepoByID :one
+SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, installed_at FROM repositories WHERE id = $1
+`
+
+func (q *Queries) GetRepoByID(ctx context.Context, id pgtype.UUID) (Repository, error) {
+	row := q.db.QueryRow(ctx, getRepoByID, id)
+	var i Repository
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.GithubRepoID,
+		&i.InstallationID,
+		&i.FullName,
+		&i.DefaultBranch,
+		&i.InstalledAt,
+	)
+	return i, err
+}
+
+const listReposByOrg = `-- name: ListReposByOrg :many
+SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, installed_at FROM repositories
+WHERE org_id = $1
+  AND full_name > $2
+ORDER BY full_name ASC
+LIMIT $3
+`
+
+type ListReposByOrgParams struct {
+	OrgID    pgtype.UUID
+	FullName string
+	Limit    int32
+}
+
+func (q *Queries) ListReposByOrg(ctx context.Context, arg ListReposByOrgParams) ([]Repository, error) {
+	rows, err := q.db.Query(ctx, listReposByOrg, arg.OrgID, arg.FullName, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Repository
+	for rows.Next() {
+		var i Repository
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrgID,
+			&i.GithubRepoID,
+			&i.InstallationID,
+			&i.FullName,
+			&i.DefaultBranch,
+			&i.InstalledAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const upsertRepo = `-- name: UpsertRepo :one
 INSERT INTO repositories (org_id, github_repo_id, installation_id, full_name, default_branch)
 VALUES ($1, $2, $3, $4, $5)

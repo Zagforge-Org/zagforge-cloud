@@ -9,3 +9,13 @@ RETURNING *;
 
 -- name: GetRepoByGithubID :one
 SELECT * FROM repositories WHERE github_repo_id = $1;
+
+-- name: GetRepoByID :one
+SELECT * FROM repositories WHERE id = $1;
+
+-- name: ListReposByOrg :many
+SELECT * FROM repositories
+WHERE org_id = $1
+  AND full_name > $2
+ORDER BY full_name ASC
+LIMIT $3;

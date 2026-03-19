@@ -93,6 +93,75 @@ func (q *Queries) GetActiveJobsForBranch(ctx context.Context, arg GetActiveJobsF
 	return items, nil
 }
 
+const getJobByID = `-- name: GetJobByID :one
+SELECT id, repo_id, branch, commit_sha, delivery_id, status, error_message, created_at, updated_at, started_at, finished_at FROM jobs WHERE id = $1
+`
+
+func (q *Queries) GetJobByID(ctx context.Context, id pgtype.UUID) (Job, error) {
+	row := q.db.QueryRow(ctx, getJobByID, id)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.RepoID,
+		&i.Branch,
+		&i.CommitSha,
+		&i.DeliveryID,
+		&i.Status,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
+const listJobsByRepo = `-- name: ListJobsByRepo :many
+SELECT id, repo_id, branch, commit_sha, delivery_id, status, error_message, created_at, updated_at, started_at, finished_at FROM jobs
+WHERE repo_id = $1
+  AND created_at < $2
+ORDER BY created_at DESC
+LIMIT $3
+`
+
+type ListJobsByRepoParams struct {
+	RepoID    pgtype.UUID
+	CreatedAt pgtype.Timestamptz
+	Limit     int32
+}
+
+func (q *Queries) ListJobsByRepo(ctx context.Context, arg ListJobsByRepoParams) ([]Job, error) {
+	rows, err := q.db.Query(ctx, listJobsByRepo, arg.RepoID, arg.CreatedAt, arg.Limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Job
+	for rows.Next() {
+		var i Job
+		if err := rows.Scan(
+			&i.ID,
+			&i.RepoID,
+			&i.Branch,
+			&i.CommitSha,
+			&i.DeliveryID,
+			&i.Status,
+			&i.ErrorMessage,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.StartedAt,
+			&i.FinishedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const markJobSuperseded = `-- name: MarkJobSuperseded :exec
 UPDATE jobs
 SET status = 'superseded'
