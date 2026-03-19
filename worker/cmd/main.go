@@ -5,44 +5,54 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/config"
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/db"
-	dbsqlc "github.com/LegationPro/zagforge-mvp-impl/api/internal/db/sqlc"
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/runner"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/logger"
 	githubprovider "github.com/LegationPro/zagforge-mvp-impl/shared/go/provider/github"
+	"github.com/LegationPro/zagforge-mvp-impl/shared/go/runner"
+	"github.com/LegationPro/zagforge-mvp-impl/shared/go/store"
 )
 
 const pollInterval = 2 * time.Second
 
 func run() error {
-	c, err := config.Load()
-	if err != nil {
-		return fmt.Errorf("load config: %w", err)
-	}
-
 	log, err := logger.New(os.Getenv("APP_ENV"))
 	if err != nil {
 		return fmt.Errorf("init logger: %w", err)
 	}
 	defer log.Sync()
 
-	pool, err := db.Connect(context.Background(), c.DB.URL)
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		return fmt.Errorf("DATABASE_URL not set")
+	}
+
+	pool, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		return fmt.Errorf("connect to db: %w", err)
 	}
 	defer pool.Close()
 
-	database := db.New(pool)
+	queries := store.New(pool)
 
-	client, err := githubprovider.NewAPIClient(c.App.GithubAppID, []byte(c.App.GithubAppPrivateKey), c.App.GithubAppWebhookSecret)
+	ghAppID := os.Getenv("GITHUB_APP_ID")
+	ghKey := os.Getenv("GITHUB_APP_PRIVATE_KEY")
+	ghSecret := os.Getenv("GITHUB_APP_WEBHOOK_SECRET")
+
+	// Parse app ID.
+	var appID int64
+	if _, err := fmt.Sscanf(ghAppID, "%d", &appID); err != nil {
+		return fmt.Errorf("invalid GITHUB_APP_ID: %w", err)
+	}
+
+	client, err := githubprovider.NewAPIClient(appID, []byte(ghKey), ghSecret)
 	if err != nil {
 		return fmt.Errorf("create API client: %w", err)
 	}
@@ -52,10 +62,23 @@ func run() error {
 		return fmt.Errorf("create client handler: %w", err)
 	}
 
+	workspaceDir := os.Getenv("WORKSPACE_DIR")
+	if workspaceDir == "" {
+		workspaceDir = filepath.Join(os.TempDir(), "zagforge-workspace")
+	}
+	zigzagBin := os.Getenv("ZIGZAG_BIN")
+	if zigzagBin == "" {
+		zigzagBin = "zagforge-worker"
+	}
+	reportsDir := os.Getenv("REPORTS_DIR")
+	if reportsDir == "" {
+		reportsDir = "/data/reports"
+	}
+
 	r := runner.New(ch, runner.Config{
-		WorkspaceDir: c.Worker.WorkspaceDir,
-		ZigzagBin:    c.Worker.ZigzagBin,
-		ReportsDir:   c.Worker.ReportsDir,
+		WorkspaceDir: workspaceDir,
+		ZigzagBin:    zigzagBin,
+		ReportsDir:   reportsDir,
 	}, log)
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -76,29 +99,27 @@ func run() error {
 			log.Info("worker stopped")
 			return nil
 		case <-ticker.C:
-			if err := pollOnce(ctx, database, r, log); err != nil {
+			if err := pollOnce(ctx, queries, r, log); err != nil {
 				log.Error("poll error", zap.Error(err))
 			}
 		}
 	}
 }
 
-// pollOnce tries to claim one queued job and execute it.
-func pollOnce(ctx context.Context, database *db.DB, r *runner.Runner, log *zap.Logger) error {
-	job, err := database.Queries.ClaimJob(ctx)
+func pollOnce(ctx context.Context, queries *store.Queries, r *runner.Runner, log *zap.Logger) error {
+	job, err := queries.ClaimJob(ctx)
 	if err != nil {
 		if err == pgx.ErrNoRows {
-			return nil // nothing to do
+			return nil
 		}
 		return fmt.Errorf("claim job: %w", err)
 	}
 
-	repo, err := database.Queries.GetRepoForJob(ctx, job.ID)
+	repo, err := queries.GetRepoForJob(ctx, job.ID)
 	if err != nil {
-		// Job claimed but repo missing — mark failed.
-		database.Queries.UpdateJobStatus(ctx, dbsqlc.UpdateJobStatusParams{
+		queries.UpdateJobStatus(ctx, store.UpdateJobStatusParams{
 			ID:           job.ID,
-			Status:       dbsqlc.JobStatusFailed,
+			Status:       store.JobStatusFailed,
 			ErrorMessage: pgtype.Text{String: "repo not found for job", Valid: true},
 		})
 		return fmt.Errorf("get repo for job: %w", err)
@@ -111,15 +132,14 @@ func pollOnce(ctx context.Context, database *db.DB, r *runner.Runner, log *zap.L
 		zap.String("commit", job.CommitSha),
 	)
 
-	// Run in a tracked goroutine so Drain can wait for it.
 	r.GoWait(func() {
-		executeJob(context.Background(), database, r, log, job, repo)
+		executeJob(context.Background(), queries, r, log, job, repo)
 	})
 
 	return nil
 }
 
-func executeJob(ctx context.Context, database *db.DB, r *runner.Runner, log *zap.Logger, job dbsqlc.Job, repo dbsqlc.GetRepoForJobRow) {
+func executeJob(ctx context.Context, queries *store.Queries, r *runner.Runner, log *zap.Logger, job store.Job, repo store.GetRepoForJobRow) {
 	cloneURL := fmt.Sprintf("https://github.com/%s.git", repo.FullName)
 
 	result, err := r.Run(ctx, githubprovider.WebhookEvent{
@@ -136,16 +156,15 @@ func executeJob(ctx context.Context, database *db.DB, r *runner.Runner, log *zap
 			zap.String("repo", repo.FullName),
 			zap.Error(err),
 		)
-		database.Queries.UpdateJobStatus(ctx, dbsqlc.UpdateJobStatusParams{
+		queries.UpdateJobStatus(ctx, store.UpdateJobStatusParams{
 			ID:           job.ID,
-			Status:       dbsqlc.JobStatusFailed,
+			Status:       store.JobStatusFailed,
 			ErrorMessage: pgtype.Text{String: err.Error(), Valid: true},
 		})
 		return
 	}
 
-	// Insert snapshot.
-	_, snapErr := database.Queries.InsertSnapshot(ctx, dbsqlc.InsertSnapshotParams{
+	_, snapErr := queries.InsertSnapshot(ctx, store.InsertSnapshotParams{
 		RepoID:          job.RepoID,
 		JobID:           job.ID,
 		Branch:          job.Branch,
@@ -159,10 +178,9 @@ func executeJob(ctx context.Context, database *db.DB, r *runner.Runner, log *zap
 		log.Error("failed to insert snapshot", zap.String("job_id", job.ID.String()), zap.Error(snapErr))
 	}
 
-	// Mark succeeded.
-	database.Queries.UpdateJobStatus(ctx, dbsqlc.UpdateJobStatusParams{
+	queries.UpdateJobStatus(ctx, store.UpdateJobStatusParams{
 		ID:     job.ID,
-		Status: dbsqlc.JobStatusSucceeded,
+		Status: store.JobStatusSucceeded,
 	})
 
 	log.Info("job succeeded",
