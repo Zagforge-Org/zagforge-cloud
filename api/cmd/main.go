@@ -24,6 +24,7 @@ import (
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/contenttype"
 	jobtokenmw "github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/jobtoken"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/ratelimit"
+	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/watchdogauth"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/service"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/jobtoken"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/logger"
@@ -85,6 +86,7 @@ func run() error {
 	healthH := health.NewHandler(pool)
 	apiH := apihandler.NewHandler(database, log)
 	callbackH := callback.NewHandler(database, ch, log)
+	watchdogH := watchdog.NewHandler(database, log)
 
 	r := router.New()
 
