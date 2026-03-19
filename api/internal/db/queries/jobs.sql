@@ -26,6 +26,18 @@ WHERE repo_id = $1
 ORDER BY created_at DESC
 LIMIT $3;
 
+-- name: ClaimJob :one
+UPDATE jobs
+SET status = 'running', started_at = now()
+WHERE id = (
+    SELECT id FROM jobs
+    WHERE status = 'queued'
+    ORDER BY created_at ASC
+    LIMIT 1
+    FOR UPDATE SKIP LOCKED
+)
+RETURNING *;
+
 -- name: UpdateJobStatus :exec
 UPDATE jobs
 SET status = $2,
