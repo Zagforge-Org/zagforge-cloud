@@ -11,50 +11,54 @@ tasks:
     build:server:
         desc: Build the server binary
         cmds:
-            - go build -o .bin/server ./cmd/server
-        silent: false
+            - go build -o .bin/server ./api/cmd/
 
     build:zigzag:
-        desc: Build the zigzag binary
+        desc: Build the zigzag wrapper binary
         cmds:
-            - go build -o .bin/zigzag ./cmd/zigzag
-        silent: false
+            - go build -o .bin/zigzag ./worker/cmd/
 
     test:
-        desc: Run all tests with race detection and coverage
+        desc: Run all tests with race detection
         cmds:
-            - go test -v -race -cover ./...
-        silent: false
-
-    run:server:
-        desc: Build and run the server
-        cmds:
-            - task: build:server
-            - ./.bin/server
+            - go test -v -race -cover ./api/... ./shared/go/... ./worker/...
 
     run:server:dev:
-        desc: Build and run the server in dev mode (APP_ENV=dev). Pass ENV_FILE=.env
+        desc: Build and run the server in dev mode. Pass ENV_FILE=.env
         vars:
             ENV_FILE: '{{.ENV_FILE | default ".env"}}'
         cmds:
             - task: build:server
             - APP_ENV=dev ENV_FILE={{.ENV_FILE}} ./.bin/server
 
-    run:zigzag:
-        desc: Build and run zigzag
-        cmds:
-            - task: build:zigzag
-            - ./.bin/zigzag
-
-    run:zigzag:dev:
-        desc: Build and run zigzag in dev mode (APP_ENV=dev). Pass ENV_FILE=.env
-        vars:
-            ENV_FILE: '{{.ENV_FILE | default ".env"}}'
-        cmds:
-            - task: build:zigzag
-            - APP_ENV=dev ENV_FILE={{.ENV_FILE}} ./.bin/zigzag
-
     webhook:forward:
         desc: Forward GitHub webhooks to local server via smee.io
         cmds:
             - smee --url https://smee.io/StaYxmPtfVR1Vq1 --target http://localhost:8080/internal/webhooks/github
+
+    db:up:
+        desc: Start local Postgres
+        cmds:
+            - docker compose -f docker-compose.dev.yaml up -d postgres
+
+    db:down:
+        desc: Stop local Postgres
+        cmds:
+            - docker compose -f docker-compose.dev.yaml down
+
+    migrate-up:
+        desc: Run all pending migrations (requires DATABASE_URL env var)
+        cmds:
+            - migrate -path api/internal/db/migrations -database $DATABASE_URL up
+
+    migrate-down:
+        desc: Roll back the last migration (requires DATABASE_URL env var)
+        cmds:
+            - migrate -path api/internal/db/migrations -database $DATABASE_URL down 1
+
+    migrate-create:
+        desc: Create a new migration file. Pass NAME=description
+        vars:
+            NAME: '{{.NAME | default "change"}}'
+        cmds:
+            - migrate create -ext sql -dir api/internal/db/migrations -seq {{.NAME}}
