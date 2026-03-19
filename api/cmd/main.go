@@ -12,7 +12,6 @@ import (
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/config"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/db"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/handler"
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/runner"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/service"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/logger"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/router"
@@ -51,16 +50,10 @@ func run() error {
 		return fmt.Errorf("create client handler: %w", err)
 	}
 
-	run := runner.New(ch, runner.Config{
-		WorkspaceDir: c.Worker.WorkspaceDir,
-		ZigzagBin:    c.Worker.ZigzagBin,
-		ReportsDir:   c.Worker.ReportsDir,
-	}, log)
-
-	svc := service.NewJobService(database, run, log)
+	svc := service.NewJobService(database, log)
 	wh := handler.NewWebhookHandler(ch, svc, log)
-
 	health := handler.NewHealthHandler(pool)
+	api := handler.NewAPIHandler(database, log)
 
 	r := router.New()
 
@@ -79,7 +72,6 @@ func run() error {
 		return fmt.Errorf("register internal routes: %w", err)
 	}
 
-	api := handler.NewAPIHandler(database, log)
 	v1 := r.Group()
 	if err := v1.Create([]router.Subroute{
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}", Handler: api.GetRepo},
@@ -108,20 +100,12 @@ func run() error {
 	defer cancel()
 	<-ctx.Done()
 
-	log.Info("shutting down server", zap.Int64("in_flight_jobs", run.InFlight()))
-
-	// 1. Stop accepting new HTTP requests.
+	log.Info("shutting down server")
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer shutdownCancel()
 
 	if err := srv.Shutdown(shutdownCtx); err != nil {
 		return fmt.Errorf("server shutdown: %w", err)
-	}
-	log.Info("http server stopped, draining jobs")
-
-	// 2. Wait for in-flight jobs with progress logging and hard timeout.
-	if err := run.Drain(2*time.Minute, 5*time.Second); err != nil {
-		return err
 	}
 
 	log.Info("server stopped")
