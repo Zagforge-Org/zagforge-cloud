@@ -55,6 +55,8 @@ func (s *JobService) HandlePush(ctx context.Context, event github.WebhookEvent, 
 	repo, err := qtx.GetRepoByGithubID(ctx, event.RepoID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			log.Printf("job service: repo not registered github_id=%d name=%s installation=%d — skipping",
+				event.RepoID, event.RepoName, event.InstallationID)
 			return nil
 		}
 		return fmt.Errorf("get repo: %w", err)
