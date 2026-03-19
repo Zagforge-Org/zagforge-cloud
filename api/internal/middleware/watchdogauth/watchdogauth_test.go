@@ -5,7 +5,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/watchdogauth"
+	"github.com/LegationPro/zagforge/api/internal/middleware/watchdogauth"
 )
 
 const testSecret = "test-watchdog-secret"

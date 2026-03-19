@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/worker/config"
+	"github.com/LegationPro/zagforge/worker/internal/worker/config"
 )
 
 var allEnvVars = []string{

@@ -8,12 +8,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	"go.uber.org/zap"
 
-	dbpkg "github.com/LegationPro/zagforge-mvp-impl/api/internal/db"
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/engine"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/jobtoken"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/pgerr"
-	github "github.com/LegationPro/zagforge-mvp-impl/shared/go/provider/github"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/store"
+	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
+	"github.com/LegationPro/zagforge/api/internal/engine"
+	"github.com/LegationPro/zagforge/shared/go/jobtoken"
+	"github.com/LegationPro/zagforge/shared/go/pgerr"
+	github "github.com/LegationPro/zagforge/shared/go/provider/github"
+	"github.com/LegationPro/zagforge/shared/go/store"
 )
 
 // JobService orchestrates job creation with deduplication.

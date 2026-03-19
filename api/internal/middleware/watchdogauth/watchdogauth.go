@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/httputil"
+	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 var (

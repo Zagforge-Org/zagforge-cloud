@@ -6,7 +6,7 @@ import (
 
 	"go.uber.org/zap"
 
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/engine"
+	"github.com/LegationPro/zagforge/api/internal/engine"
 )
 
 func TestNoopEnqueuer_returnsNil(t *testing.T) {

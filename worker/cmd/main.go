@@ -12,17 +12,17 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"go.uber.org/zap"
 
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/jobtoken"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/logger"
-	githubprovider "github.com/LegationPro/zagforge-mvp-impl/shared/go/provider/github"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/runner"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/storage"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/store"
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/apiclient"
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/worker/config"
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/worker/executor"
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/worker/handler"
-	"github.com/LegationPro/zagforge-mvp-impl/worker/internal/worker/poller"
+	"github.com/LegationPro/zagforge/shared/go/jobtoken"
+	"github.com/LegationPro/zagforge/shared/go/logger"
+	githubprovider "github.com/LegationPro/zagforge/shared/go/provider/github"
+	"github.com/LegationPro/zagforge/shared/go/runner"
+	"github.com/LegationPro/zagforge/shared/go/storage"
+	"github.com/LegationPro/zagforge/shared/go/store"
+	"github.com/LegationPro/zagforge/worker/internal/apiclient"
+	"github.com/LegationPro/zagforge/worker/internal/worker/config"
+	"github.com/LegationPro/zagforge/worker/internal/worker/executor"
+	"github.com/LegationPro/zagforge/worker/internal/worker/handler"
+	"github.com/LegationPro/zagforge/worker/internal/worker/poller"
 )
 
 const pollInterval = 2 * time.Second

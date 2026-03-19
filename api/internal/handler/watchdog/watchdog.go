@@ -7,8 +7,8 @@ import (
 
 	"go.uber.org/zap"
 
-	dbpkg "github.com/LegationPro/zagforge-mvp-impl/api/internal/db"
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/httputil"
+	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
+	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 const defaultTimeoutMinutes = 20

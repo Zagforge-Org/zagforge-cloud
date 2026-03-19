@@ -1,10 +1,10 @@
-module github.com/LegationPro/zagforge-mvp-impl/api
+module github.com/LegationPro/zagforge/api
 
 go 1.26.1
 
 require (
 	cloud.google.com/go/cloudtasks v1.13.7
-	github.com/LegationPro/zagforge-mvp-impl/shared/go v0.0.0
+	github.com/LegationPro/zagforge/shared/go v0.0.0
 	github.com/alicebob/miniredis/v2 v2.37.0
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/clerk/clerk-sdk-go/v2 v2.5.1
@@ -62,4 +62,4 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 
-replace github.com/LegationPro/zagforge-mvp-impl/shared/go => ../shared/go
+replace github.com/LegationPro/zagforge/shared/go => ../shared/go

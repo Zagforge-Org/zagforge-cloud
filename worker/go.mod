@@ -1,9 +1,9 @@
-module github.com/LegationPro/zagforge-mvp-impl/worker
+module github.com/LegationPro/zagforge/worker
 
 go 1.26.1
 
 require (
-	github.com/LegationPro/zagforge-mvp-impl/shared/go v0.0.0
+	github.com/LegationPro/zagforge/shared/go v0.0.0
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/jackc/pgx/v5 v5.8.0
 	go.uber.org/zap v1.27.1
@@ -65,6 +65,6 @@ require (
 )
 
 replace (
-	github.com/LegationPro/zagforge-mvp-impl/api => ../api
-	github.com/LegationPro/zagforge-mvp-impl/shared/go => ../shared/go
+	github.com/LegationPro/zagforge/api => ../api
+	github.com/LegationPro/zagforge/shared/go => ../shared/go
 )
