@@ -15,10 +15,15 @@ type DBConfig struct {
 	URL string
 }
 
+type RedisConfig struct {
+	URL string
+}
+
 type Config struct {
 	App    *AppConfig
 	Server *ServerConfig
 	DB     *DBConfig
+	Redis  *RedisConfig
 }
 
 func Load() (*Config, error) {
@@ -43,5 +48,15 @@ func Load() (*Config, error) {
 	if dbURL == "" {
 		return nil, notSetErr("DATABASE_URL")
 	}
-	return &Config{App: app, Server: server, DB: &DBConfig{URL: dbURL}}, nil
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		return nil, notSetErr("REDIS_URL")
+	}
+
+	return &Config{
+		App:    app,
+		Server: server,
+		DB:     &DBConfig{URL: dbURL},
+		Redis:  &RedisConfig{URL: redisURL},
+	}, nil
 }

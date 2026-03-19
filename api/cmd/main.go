@@ -10,12 +10,14 @@ import (
 	"time"
 
 	"github.com/clerk/clerk-sdk-go/v2"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/config"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/db"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/handler"
-	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware"
+	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/auth"
+	"github.com/LegationPro/zagforge-mvp-impl/api/internal/middleware/ratelimit"
 	"github.com/LegationPro/zagforge-mvp-impl/api/internal/service"
 	"github.com/LegationPro/zagforge-mvp-impl/shared/go/logger"
 	githubprovider "github.com/LegationPro/zagforge-mvp-impl/shared/go/provider/github"
@@ -42,6 +44,21 @@ func run() error {
 
 	database := db.New(pool)
 
+	// Redis for rate limiting.
+	redisOpts, err := redis.ParseURL(c.Redis.URL)
+	if err != nil {
+		return fmt.Errorf("parse redis url: %w", err)
+	}
+	rdb := redis.NewClient(redisOpts)
+	defer func() {
+		if err := rdb.Close(); err != nil {
+			log.Warn("failed to close redis", zap.Error(err))
+		}
+	}()
+	if err := rdb.Ping(context.Background()).Err(); err != nil {
+		return fmt.Errorf("connect to redis: %w", err)
+	}
+
 	client, err := githubprovider.NewAPIClient(c.App.GithubAppID, []byte(c.App.GithubAppPrivateKey), c.App.GithubAppWebhookSecret)
 	if err != nil {
 		return fmt.Errorf("create API client: %w", err)
@@ -61,6 +78,7 @@ func run() error {
 
 	r := router.New()
 
+	// Health — no auth, no rate limit.
 	healthRoutes := r.Group()
 	if err := healthRoutes.Create([]router.Subroute{
 		{Method: router.GET, Path: "/healthz", Handler: health.Liveness},
@@ -69,15 +87,25 @@ func run() error {
 		return fmt.Errorf("register health routes: %w", err)
 	}
 
+	// Webhooks — rate limited by IP, higher burst (GitHub sends bursts).
 	internal := r.Group()
+	internal.Use(ratelimit.RateLimit(rdb, ratelimit.RateLimitConfig{
+		MaxRequests: 120,
+		Window:      1 * time.Minute,
+	}, "webhook", log))
 	if err := internal.Create([]router.Subroute{
 		{Method: router.POST, Path: "/internal/webhooks/github", Handler: wh.ServeHTTP},
 	}); err != nil {
 		return fmt.Errorf("register internal routes: %w", err)
 	}
 
+	// API v1 — auth + rate limited by user ID (or IP if unauthenticated).
 	v1 := r.Group()
-	v1.Use(middleware.Auth(log))
+	v1.Use(ratelimit.RateLimit(rdb, ratelimit.RateLimitConfig{
+		MaxRequests: 60,
+		Window:      1 * time.Minute,
+	}, "api", log))
+	v1.Use(auth.Auth(log))
 	if err := v1.Create([]router.Subroute{
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}", Handler: api.GetRepo},
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}/jobs", Handler: api.ListJobs},

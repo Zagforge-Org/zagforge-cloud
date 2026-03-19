@@ -1,4 +1,4 @@
-package middleware
+package auth
 
 import (
 	"context"
@@ -24,7 +24,7 @@ var (
 )
 
 type Response struct {
-	Error string `json:"error,omitempty"`
+	Error *string `json:"error,omitempty"`
 }
 
 // ClaimsFromContext retrieves the Clerk session claims from the request context.
@@ -43,7 +43,7 @@ func Auth(log *zap.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			token := extractToken(r)
 			if token == "" {
-				httputil.WriteJSON(w, http.StatusUnauthorized, Response{Error: ErrMissingToken.Error()})
+				httputil.WriteJSON(w, http.StatusUnauthorized, Response{Error: new(ErrMissingToken.Error())})
 				return
 			}
 
@@ -52,7 +52,7 @@ func Auth(log *zap.Logger) func(http.Handler) http.Handler {
 			})
 			if err != nil {
 				log.Warn("auth: invalid token", zap.Error(err))
-				httputil.WriteJSON(w, http.StatusUnauthorized, Response{Error: ErrInvalidToken.Error()})
+				httputil.WriteJSON(w, http.StatusUnauthorized, Response{Error: new(ErrInvalidToken.Error())})
 				return
 			}
 

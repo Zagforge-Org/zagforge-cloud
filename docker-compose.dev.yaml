@@ -15,6 +15,16 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   migrate:
     build:
       context: .
@@ -40,6 +50,7 @@ services:
       APP_ENV: dev
       PORT: "8080"
       DATABASE_URL: postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
       GITHUB_APP_ID: ${GITHUB_APP_ID}
       GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
       GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET}
@@ -52,6 +63,8 @@ services:
       start_period: 15s
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
