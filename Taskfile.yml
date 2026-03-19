@@ -25,6 +25,7 @@ tasks:
 
     run:server:dev:
         desc: Build and run the server in dev mode. Pass ENV_FILE=.env
+        dotenv: [".env"]
         vars:
             ENV_FILE: '{{.ENV_FILE | default ".env"}}'
         cmds:
@@ -34,7 +35,7 @@ tasks:
     webhook:forward:
         desc: Forward GitHub webhooks to local server via smee.io
         cmds:
-            - smee --url https://smee.io/StaYxmPtfVR1Vq1 --target http://localhost:8080/internal/webhooks/github
+            - npx smee-client --url https://smee.io/StaYxmPtfVR1Vq1 --target http://localhost:8080/internal/webhooks/github
 
     db:up:
         desc: Start local Postgres
@@ -47,12 +48,14 @@ tasks:
             - docker compose -f docker-compose.dev.yaml down
 
     migrate-up:
-        desc: Run all pending migrations (requires DATABASE_URL env var)
+        desc: Run all pending migrations
+        dotenv: [".env"]
         cmds:
             - migrate -path api/internal/db/migrations -database $DATABASE_URL up
 
     migrate-down:
-        desc: Roll back the last migration (requires DATABASE_URL env var)
+        desc: Roll back the last migration
+        dotenv: [".env"]
         cmds:
             - migrate -path api/internal/db/migrations -database $DATABASE_URL down 1
 
