@@ -24,15 +24,11 @@ type Config struct {
 
 func Load() (*Config, error) {
 	if os.Getenv("APP_ENV") == "dev" {
-
-		envFile := os.Getenv("ENV_FILE")
-		if envFile == "" {
-			return nil, notSetErr("ENV_FILE")
-		}
-
-		err := godotenv.Load(os.Getenv("ENV_FILE"))
-		if err != nil {
-			return nil, err
+		if envFile := os.Getenv("ENV_FILE"); envFile != "" {
+			err := godotenv.Load(envFile)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
