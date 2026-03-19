@@ -98,7 +98,7 @@ func run() error {
 		if err != nil {
 			return fmt.Errorf("create cloud tasks enqueuer: %w", err)
 		}
-		defer ct.Close()
+		defer func() { _ = ct.Close() }()
 		enqueuer = ct
 		log.Info("cloud tasks enqueuer enabled",
 			zap.String("queue", c.CloudTasks.Queue),
