@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	BinaryName = "zigzag"
+	binary = "zigzag"
 )
 
 func main() {
@@ -21,9 +21,9 @@ func main() {
 		log.Fatalf("usage: %s <command> [args...]", os.Args[0])
 	}
 
-	path, err := exec.LookPath(BinaryName)
+	path, err := exec.LookPath(binary)
 	if err != nil && errors.Is(err, os.ErrNotExist) {
-		log.Fatalf("error: %s not found: %v", BinaryName, err)
+		log.Fatalf("error: %s not found: %v", binary, err)
 	} else if err != nil {
 		log.Fatalf("error: %v", err)
 	}
@@ -44,8 +44,7 @@ func main() {
 	case errors.Is(err, context.DeadlineExceeded):
 		log.Fatalf("error: command timed out")
 	case err != nil:
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			os.Exit(exitErr.ExitCode())
 		}
 		log.Fatalf("error running command: %v", err)
