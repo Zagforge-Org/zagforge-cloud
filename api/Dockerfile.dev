@@ -1,12 +1,29 @@
-FROM golang:1.26-alpine
+FROM golang:1.26.1-alpine
+RUN apk add --no-cache git curl tar gcompat
 RUN go install github.com/air-verse/air@latest
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+# Install zigzag from prebuilt release
+ARG TARGETARCH
+ARG ZIGZAG_VERSION=v0.15.1
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+      amd64) ZIGZAG_ARCH="x86_64" ;; \
+      arm64) ZIGZAG_ARCH="aarch64" ;; \
+      *) echo "unsupported arch: ${TARGETARCH}" && exit 1 ;; \
+    esac; \
+    curl -fsSL "https://github.com/LegationPro/zigzag/releases/download/${ZIGZAG_VERSION}/zigzag-${ZIGZAG_ARCH}-linux.tar.gz" \
+      | tar xz -C /usr/local/bin
+
 WORKDIR /app
 # Copy workspace manifests first for layer caching
 COPY go.work go.work.sum ./
 COPY api/go.mod api/go.sum ./api/
-COPY worker/go.mod worker/go.sum ./worker/
+COPY worker/go.mod worker/go.su[m] ./worker/
 COPY shared/go/go.mod shared/go/go.sum ./shared/go/
 RUN go work sync
 COPY . .
+# Build the worker wrapper binary (must NOT be named "zigzag" — it wraps the real zigzag)
+RUN go build -o /usr/local/bin/zagforge-worker ./worker/cmd/
 WORKDIR /app/api
 CMD ["air"]
