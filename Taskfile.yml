@@ -9,6 +9,12 @@ includes:
         taskfile: Taskfile.deploy.yml
 
 tasks:
+    setup:
+        desc: One-time setup for new developers
+        cmds:
+            - git config core.hooksPath .githooks
+            - echo "Git hooks configured."
+
     build:
         desc: Run tests and build all binaries
         cmds:
