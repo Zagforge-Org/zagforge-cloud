@@ -45,5 +45,5 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// TODO: store installation_id, sync repos, redirect to frontend dashboard
-	fmt.Fprintf(w, "Installation %s successful (action: %s)", installationID, setupAction)
+	_, _ = fmt.Fprintf(w, "Installation %s successful (action: %s)", installationID, setupAction)
 }
