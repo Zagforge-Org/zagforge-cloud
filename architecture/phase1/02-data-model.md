@@ -84,3 +84,62 @@ CREATE INDEX idx_snapshots_latest ON snapshots (repo_id, branch, created_at DESC
 CREATE INDEX idx_snapshots_job_id ON snapshots (job_id);
 CREATE UNIQUE INDEX idx_snapshots_unique ON snapshots (repo_id, branch, commit_sha);
 ```
+
+---
+
+## Phase 5 Additions
+
+### Migration: `snapshots` — make `job_id` nullable, add `metadata`
+
+```sql
+-- CLI-uploaded snapshots have no associated job; job_id is only set by the worker
+ALTER TABLE snapshots ALTER COLUMN job_id DROP NOT NULL;
+
+-- Stores ignore_patterns and zigzag_config_hash from the Zigzag run
+-- Used by the Context Proxy to know which files to exclude when fetching from GitHub
+ALTER TABLE snapshots ADD COLUMN metadata JSONB;
+```
+
+`job_id` is NULL for CLI-sourced snapshots; populated for webhook-triggered snapshots. Query paths that reference jobs must handle NULL.
+
+### New: `ai_provider_keys`
+
+Stores encrypted AI provider credentials per org. Used by the Query Console to proxy requests to OpenAI, Anthropic, or Google.
+
+```sql
+CREATE TABLE ai_provider_keys (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    org_id      UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+    provider    TEXT NOT NULL CHECK (provider IN ('openai', 'anthropic', 'google')),
+    key_cipher  BYTEA NOT NULL,   -- nonce (12 bytes) || AES-256-GCM ciphertext
+    key_hint    TEXT NOT NULL,    -- last 4 chars for UI display e.g. "...xK9f"
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (org_id, provider)
+);
+```
+
+Encryption key sourced from Google Secret Manager at runtime. Never stored in env vars or Go source.
+
+### New: `context_tokens`
+
+Backing table for the Context URL feature. Each token is a revocable, optionally-expiring credential scoped to a single repo.
+
+```sql
+CREATE TABLE context_tokens (
+    id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    repo_id            UUID NOT NULL REFERENCES repositories(id) ON DELETE CASCADE,
+    org_id             UUID NOT NULL REFERENCES organizations(id),
+    target_snapshot_id UUID REFERENCES snapshots(id) ON DELETE SET NULL,
+    -- NULL = always resolve to latest snapshot
+    -- SET  = locked to a specific snapshot version (stable docs, release tags, etc.)
+    token_hash         TEXT UNIQUE NOT NULL,  -- SHA-256(raw_token); raw token never stored
+    label              TEXT,                  -- user-supplied e.g. "Cursor Rules", "Claude Project"
+    last_used_at       TIMESTAMPTZ,           -- updated async, not on the critical path
+    expires_at         TIMESTAMPTZ,           -- NULL = never expires
+    created_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX idx_context_tokens_hash ON context_tokens (token_hash);
+```
+
+**Token format:** `zf_ctx_<32 random URL-safe chars>` (~192 bits entropy). Raw token returned once at creation time; only the SHA-256 hash is persisted. Format prefix enables GitHub secret scanning integration.

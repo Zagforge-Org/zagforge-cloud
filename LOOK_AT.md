@@ -32,7 +32,7 @@ Everything below is already built and working on the `dev` branch (30+ commits a
 
 Create the full `terraform/` directory. No Terraform exists yet.
 
-**Read:** [architecture/11-terraform.md](architecture/11-terraform.md) — full module tree, state management, env tfvars
+**Read:** [architecture/phase3/11-terraform.md](architecture/phase3/11-terraform.md) — full module tree, state management, env tfvars
 
 Files to create:
 ```
@@ -60,7 +60,7 @@ Key decisions from the spec:
 
 ### 3.2 Cloud Load Balancer + Cloud Armor
 
-**Read:** [architecture/08-networking.md](architecture/08-networking.md) — LB routing rules, Cloud Armor WAF, rate limiting layers
+**Read:** [architecture/phase3/08-networking.md](architecture/phase3/08-networking.md) — LB routing rules, Cloud Armor WAF, rate limiting layers
 
 What to implement:
 - Global external Application Load Balancer (L7)
@@ -77,7 +77,7 @@ What to implement:
 
 ### 3.3 Secret Manager
 
-**Read:** [architecture/05-authentication.md](architecture/05-authentication.md) — secrets list, rotation strategy
+**Read:** [architecture/phase2/05-authentication.md](architecture/phase2/05-authentication.md) — secrets list, rotation strategy
 
 Secrets to provision:
 | Secret | Rotation |
@@ -95,7 +95,7 @@ Secrets to provision:
 
 ### 4.1 Deploy Pipelines (GitHub Actions)
 
-**Read:** [architecture/10-cicd.md](architecture/10-cicd.md) — full workflow YAML for CI, deploy-api, deploy-worker
+**Read:** [architecture/phase4/10-cicd.md](architecture/phase4/10-cicd.md) — full workflow YAML for CI, deploy-api, deploy-worker
 
 What's already done:
 - `ci.yml` — lint, test, build (exists, working)
@@ -112,7 +112,7 @@ What's missing:
 
 ### 4.2 Makefile — Manual Deploys & Operations
 
-**Read:** [architecture/14-deployment-ops.md](architecture/14-deployment-ops.md) — full Makefile, rollback playbook, canary deploys
+**Read:** [architecture/phase4/14-deployment-ops.md](architecture/phase4/14-deployment-ops.md) — full Makefile, rollback playbook, canary deploys
 
 No root `Makefile` exists yet. Create it with these targets:
 
@@ -132,17 +132,17 @@ No root `Makefile` exists yet. Create it with these targets:
 
 Also create per-service Makefiles:
 
-**Read:** [architecture/12-local-dev.md](architecture/12-local-dev.md) — `api/Makefile` (build, migrate-*, sqlc), `worker/Makefile` (build, run, test)
+**Read:** [architecture/phase1/12-local-dev.md](architecture/phase1/12-local-dev.md) — `api/Makefile` (build, migrate-*, sqlc), `worker/Makefile` (build, run, test)
 
 ### 4.3 Production Docker Compose
 
-**Read:** [architecture/12-local-dev.md](architecture/12-local-dev.md) — `docker-compose.yaml` (prod-like, no volume mounts)
+**Read:** [architecture/phase1/12-local-dev.md](architecture/phase1/12-local-dev.md) — `docker-compose.yaml` (prod-like, no volume mounts)
 
 A `docker-compose.yaml` for production-like local builds (no Air, no volume mounts, built images) is specced but may not exist yet. Check `docker/` directory for current state.
 
 ### 4.4 Doppler Integration
 
-**Read:** [architecture/12-local-dev.md](architecture/12-local-dev.md) — Doppler project structure, onboarding flow, `.env.example`
+**Read:** [architecture/phase1/12-local-dev.md](architecture/phase1/12-local-dev.md) — Doppler project structure, onboarding flow, `.env.example`
 
 What to set up:
 - Doppler project `zagforge` with `dev`, `staging`, `prod` configs
@@ -156,7 +156,7 @@ What to set up:
 
 ### GitHub App OAuth Flow
 
-**Read:** [architecture/04-api-endpoints.md](architecture/04-api-endpoints.md)
+**Read:** [architecture/phase2/04-api-endpoints.md](architecture/phase2/04-api-endpoints.md)
 
 Two endpoints not yet built:
 - `GET /auth/github/install` — redirect to GitHub App installation
@@ -164,7 +164,7 @@ Two endpoints not yet built:
 
 ### CORS Headers
 
-**Read:** [architecture/05-authentication.md](architecture/05-authentication.md) — CORS section
+**Read:** [architecture/phase2/05-authentication.md](architecture/phase2/05-authentication.md) — CORS section
 
 Public API should serve:
 ```
@@ -175,7 +175,7 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 
 ### Integration Tests
 
-**Read:** [architecture/10-cicd.md](architecture/10-cicd.md) — `test-integration` job
+**Read:** [architecture/phase4/10-cicd.md](architecture/phase4/10-cicd.md) — `test-integration` job
 
 The CI spec includes a `test-integration` job that spins up docker-compose, waits for `/healthz`, and runs `go test -tags=integration`. No integration test files exist yet.
 
@@ -201,16 +201,22 @@ The CI spec includes a `test-integration` job that spins up docker-compose, wait
 | Doc | Phase | What's in it |
 |---|---|---|
 | [01-overview.md](architecture/01-overview.md) | All | Tech stack, phases, system diagram |
-| [02-data-model.md](architecture/02-data-model.md) | 1 | Tables: organizations, repositories, jobs, snapshots |
-| [03-job-system.md](architecture/03-job-system.md) | 2 | Job state machine, dedup, watchdog, Cloud Tasks config |
-| [04-api-endpoints.md](architecture/04-api-endpoints.md) | 2 | All public + internal + auth endpoints |
-| [05-authentication.md](architecture/05-authentication.md) | 2 | Auth mechanisms, job tokens, CORS, config, secrets |
-| [06-provider-and-worker.md](architecture/06-provider-and-worker.md) | 2 | GitHub client, consumer interfaces, worker container |
-| [07-storage.md](architecture/07-storage.md) | 2 | GCS layout, snapshot JSON format |
-| [08-networking.md](architecture/08-networking.md) | 3 | LB, Cloud Armor, rate limiting layers |
-| [09-docker.md](architecture/09-docker.md) | 1 | Dockerfiles (dev + prod) for api and worker |
-| [10-cicd.md](architecture/10-cicd.md) | 4 | CI + deploy GitHub Actions workflows |
-| [11-terraform.md](architecture/11-terraform.md) | 3 | Full Terraform module structure + example HCL |
-| [12-local-dev.md](architecture/12-local-dev.md) | 1 | go.work, Doppler, compose, Makefiles, running locally |
-| [13-repo-structure.md](architecture/13-repo-structure.md) | 1 | Full directory tree |
-| [14-deployment-ops.md](architecture/14-deployment-ops.md) | 4 | Makefile ops, rollback playbook, canary, staging-to-prod |
+| [phase1/02-data-model.md](architecture/phase1/02-data-model.md) | 1, 5 | Tables: organizations, repositories, jobs, snapshots + Phase 5: ai_provider_keys, context_tokens, migrations |
+| [phase1/09-docker.md](architecture/phase1/09-docker.md) | 1 | Dockerfiles (dev + prod) for api and worker |
+| [phase1/12-local-dev.md](architecture/phase1/12-local-dev.md) | 1 | go.work, Doppler, compose, Makefiles, running locally |
+| [phase1/13-repo-structure.md](architecture/phase1/13-repo-structure.md) | 1 | Full directory tree |
+| [phase2/03-job-system.md](architecture/phase2/03-job-system.md) | 2 | Job state machine, dedup, watchdog, Cloud Tasks config |
+| [phase2/04-api-endpoints.md](architecture/phase2/04-api-endpoints.md) | 2, 5 | All public + internal + auth endpoints + Phase 5: upload, context URL, query, token mgmt, AI key mgmt |
+| [phase2/05-authentication.md](architecture/phase2/05-authentication.md) | 2, 5 | Auth mechanisms, job tokens, CORS, config, secrets + Phase 5: CLI token auth, context token auth, AI key encryption |
+| [phase2/06-provider-and-worker.md](architecture/phase2/06-provider-and-worker.md) | 2 | GitHub client, consumer interfaces, worker container |
+| [phase2/07-storage.md](architecture/phase2/07-storage.md) | 2, 5 | GCS layout, snapshot JSON format + Phase 5: snapshot_version 2, context assembly cache |
+| [phase3/08-networking.md](architecture/phase3/08-networking.md) | 3 | LB, Cloud Armor, rate limiting layers |
+| [phase3/11-terraform.md](architecture/phase3/11-terraform.md) | 3 | Full Terraform module structure + example HCL |
+| [phase4/10-cicd.md](architecture/phase4/10-cicd.md) | 4 | CI + deploy GitHub Actions workflows |
+| [phase4/14-deployment-ops.md](architecture/phase4/14-deployment-ops.md) | 4 | Makefile ops, rollback playbook, canary, staging-to-prod |
+| [phase5/15-context-proxy.md](architecture/phase5/15-context-proxy.md) | 5 | Context URL, streaming assembly pipeline, Query Console, token lifecycle |
+| [phase5/16-dashboard.md](architecture/phase5/16-dashboard.md) | 5 | Next.js `apps/cloud` — routes, auth (Clerk headless), SSR strategy, UX decisions |
+| [phase5/17-cli-upload.md](architecture/phase5/17-cli-upload.md) | 5 | `zigzag --upload` flag, CLI token auth, upload endpoint logic, open source placement |
+
+https://www.youtube.com/watch?v=fsuHLafTYyg
+https://www.youtube.com/watch?v=6RM-pR8QsgQ

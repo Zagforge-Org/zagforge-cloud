@@ -86,6 +86,8 @@ Access-Control-Allow-Headers: Authorization, Content-Type
 
 No `POST`/`PUT`/`DELETE` on the public API in Phase 1 (read-only). Internal endpoints do not set CORS headers.
 
+**Phase 5 addition:** `/v1/context/*` endpoints also carry `Access-Control-Allow-Origin: *`. Callers are AI tools (Cursor, Claude Projects) that are not browser-origin-constrained, but some tooling sends CORS preflight regardless.
+
 ---
 
 ## Request Validation
@@ -156,6 +158,44 @@ type AuthConfig struct {
 ```
 
 `caarlos0/env` supports nested structs with `envPrefix` — each group can be passed independently to the component that needs it, avoiding the pattern of passing full config to every handler.
+
+---
+
+---
+
+## Phase 5 Additions
+
+### CLI Token Authentication
+
+`POST /api/v1/upload` uses a separate auth mechanism from Clerk session JWTs. CLI tokens are long-lived API keys issued by Zagforge, formatted as `zf_pk_<random>`.
+
+The Go API uses a distinct middleware for this endpoint — it does **not** go through `clerkjwt.Verify()`. Options for implementation:
+- Custom `api_keys` table (token stored hashed, org-scoped)
+- Clerk machine tokens (if Clerk's machine-to-machine offering is adopted)
+
+Either way: the middleware resolves the token to an `org_id` and enforces that the upload targets that org only.
+
+### Context Token Authentication
+
+`GET /v1/context/{raw_token}` and `HEAD /v1/context/{raw_token}` use no `Authorization` header. The raw token in the URL path is the credential. The middleware:
+
+1. Computes `SHA-256(raw_token)`
+2. Looks up `context_tokens` by `token_hash`
+3. Returns 404 if not found, 410 Gone if `expires_at < now()`
+4. Passes resolved `context_token` row to the handler
+
+Rate limiting uses Redis key `rl:ctx:{token_hash}` (60 req/min), separate namespace from `/api/v1/` rate limiter keys.
+
+### AI Key Encryption
+
+AI provider keys are stored AES-256-GCM encrypted in `ai_provider_keys.key_cipher`.
+
+- `key_cipher` format: `nonce (12 bytes) || ciphertext`
+- Encryption key: fetched from Google Secret Manager at startup, never in env or source
+- Decryption: `key_cipher[:12]` is the nonce; `key_cipher[12:]` is the ciphertext
+- `key_hint`: last 4 chars of the raw key, stored plaintext for UI display only
+
+Provider key selection order for Query Console (Phase 5, hardcoded): Anthropic → OpenAI → Google.
 
 ---
 
