@@ -2,6 +2,8 @@ version: "3"
 
 vars:
     ENV: '{{.ENV | default "dev"}}'
+    # Map task ENV to Doppler config names.
+    DOPPLER_CONFIG: '{{if eq .ENV "prod"}}prd{{else if eq .ENV "staging"}}stg{{else}}dev{{end}}'
     PROJECT_ID:
         sh: grep '^project_id' terraform/envs/{{.ENV}}.tfvars | sed 's/.*= *"\(.*\)"/\1/'
     REGION:
@@ -9,6 +11,54 @@ vars:
     REGISTRY: "{{.REGION}}-docker.pkg.dev/{{.PROJECT_ID}}/zagforge"
 
 tasks:
+    sync-secrets:
+        desc: "Sync Doppler secrets to a Cloud Run service. Usage: task deploy:sync-secrets SERVICE=api [ENV=dev]"
+        requires:
+            vars: [SERVICE]
+        cmds:
+            - echo "Syncing Doppler ({{.DOPPLER_CONFIG}}) → zagforge-{{.SERVICE}} in {{.ENV}}..."
+            - |
+                # Fetch secrets from Doppler as KEY=VALUE pairs.
+                # Exclude Doppler metadata and PORT (reserved by Cloud Run).
+                SECRETS=$(doppler secrets download \
+                  --project zagforge \
+                  --config {{.DOPPLER_CONFIG}} \
+                  --format env-no-quotes \
+                  --no-file 2>/dev/null \
+                  | grep -v '^DOPPLER_' \
+                  | grep -v '^PORT=' \
+                  | paste -sd, -)
+                gcloud run services update zagforge-{{.SERVICE}} \
+                  --region {{.REGION}} \
+                  --project {{.PROJECT_ID}} \
+                  --set-env-vars "$SECRETS"
+            - echo "Done. Secrets synced to zagforge-{{.SERVICE}}."
+
+    sync-all:
+        desc: "Sync Doppler secrets to both API and Worker. Usage: task deploy:sync-all [ENV=dev]"
+        cmds:
+            - task: sync-secrets
+              vars: { SERVICE: api }
+            - task: sync-secrets
+              vars: { SERVICE: worker }
+
+    ship:
+        desc: "Trigger GitHub Actions deploy. Usage: task deploy:ship SERVICE=api [ENV=dev]"
+        requires:
+            vars: [SERVICE]
+        cmds:
+            - echo "Triggering deploy for {{.SERVICE}} to {{.ENV}}..."
+            - gh workflow run deploy-{{.SERVICE}}.yml --ref main -f environment={{.ENV}}
+            - echo "Deploy triggered. Watch at https://github.com/LegationPro/zagforge-mvp/actions"
+
+    ship:all:
+        desc: "Deploy both API and Worker. Usage: task deploy:ship:all [ENV=dev]"
+        cmds:
+            - task: ship
+              vars: { SERVICE: api }
+            - task: ship
+              vars: { SERVICE: worker }
+
     image-push:
         desc: "Build and push a service image. Usage: task deploy:image-push SERVICE=api [ENV=prod]"
         requires:
@@ -21,7 +71,7 @@ tasks:
             - docker push {{.REGISTRY}}/{{.SERVICE}}:{{.COMMIT}}
 
     deploy:
-        desc: "Deploy a Cloud Run service. Usage: task deploy:deploy SERVICE=api [ENV=prod] [COMMIT=abc123]"
+        desc: "Deploy a Cloud Run service with Doppler secrets. Usage: task deploy:deploy SERVICE=api [ENV=prod] [COMMIT=abc123]"
         requires:
             vars: [SERVICE]
         vars:
@@ -29,11 +79,20 @@ tasks:
                 sh: git rev-parse HEAD
         cmds:
             - echo "Deploying {{.SERVICE}} at {{.COMMIT}} to {{.ENV}} ({{.PROJECT_ID}} / {{.REGION}})..."
-            - >
-                gcloud run deploy zagforge-{{.SERVICE}}
-                --image {{.REGISTRY}}/{{.SERVICE}}:{{.COMMIT}}
-                --region {{.REGION}}
-                --project {{.PROJECT_ID}}
+            - |
+                SECRETS=$(doppler secrets download \
+                  --project zagforge \
+                  --config {{.DOPPLER_CONFIG}} \
+                  --format env-no-quotes \
+                  --no-file 2>/dev/null \
+                  | grep -v '^DOPPLER_' \
+                  | grep -v '^PORT=' \
+                  | paste -sd, -)
+                gcloud run deploy zagforge-{{.SERVICE}} \
+                  --image {{.REGISTRY}}/{{.SERVICE}}:{{.COMMIT}} \
+                  --region {{.REGION}} \
+                  --project {{.PROJECT_ID}} \
+                  --set-env-vars "$SECRETS"
 
     deploy-job:
         desc: "Deploy a Cloud Run job. Usage: task deploy:deploy-job SERVICE=worker [ENV=prod] [COMMIT=abc123]"

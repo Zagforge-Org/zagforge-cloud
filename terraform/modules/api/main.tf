@@ -17,17 +17,21 @@ resource "google_cloud_run_v2_service" "api" {
     }
 
     containers {
-      # Placeholder image — GitHub Actions owns the actual image tag
+      # Placeholder image — GitHub Actions owns the actual image tag.
       image = "us-docker.pkg.dev/cloudrun/container/hello"
 
       ports {
         container_port = 8080
       }
 
-      # --- Non-sensitive config ---
+      # --- Non-sensitive config (managed by Terraform) ---
       env {
         name  = "APP_ENV"
         value = var.environment
+      }
+      env {
+        name  = "PORT"
+        value = "8080"
       }
       env {
         name  = "GITHUB_APP_ID"
@@ -66,70 +70,11 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.cors_allowed_origins
       }
 
-      # --- Secrets from Secret Manager ---
-      env {
-        name = "DATABASE_URL"
-        value_source {
-          secret_key_ref {
-            secret  = "database-url"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "REDIS_URL"
-        value_source {
-          secret_key_ref {
-            secret  = "redis-url"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "GITHUB_APP_PRIVATE_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "github-app-private-key"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "GITHUB_APP_WEBHOOK_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "github-app-webhook-secret"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "HMAC_SIGNING_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "hmac-signing-key"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "CLERK_SECRET_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "clerk-secret-key"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "WATCHDOG_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "watchdog-secret"
-            version = "latest"
-          }
-        }
-      }
+      # --- Secrets (managed by Doppler, injected at deploy time) ---
+      # The following env vars are set via `doppler run -- gcloud run services update`:
+      #   DATABASE_URL, REDIS_URL, GITHUB_APP_PRIVATE_KEY,
+      #   GITHUB_APP_WEBHOOK_SECRET, HMAC_SIGNING_KEY, CLERK_SECRET_KEY,
+      #   WATCHDOG_SECRET, ENCRYPTION_KEY_BASE64, CLI_API_KEY
 
       resources {
         limits = {
@@ -159,6 +104,7 @@ resource "google_cloud_run_v2_service" "api" {
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
+      template[0].containers[0].env,
     ]
   }
 }

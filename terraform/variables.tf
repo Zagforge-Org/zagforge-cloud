@@ -102,9 +102,5 @@ variable "domain" {
   default     = ""
 }
 
-# Secrets (references, not values — actual values live in Secret Manager)
-variable "secret_ids" {
-  description = "Map of secret names to Secret Manager secret IDs"
-  type        = map(string)
-  default     = {}
-}
+# Secrets are managed by Doppler — no Terraform variables needed.
+# Injected at deploy time via: doppler run -- gcloud run services update ...

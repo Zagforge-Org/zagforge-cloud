@@ -19,7 +19,7 @@ resource "google_cloud_run_v2_service" "worker" {
     timeout = "900s"
 
     containers {
-      # Placeholder image — GitHub Actions owns the actual image tag
+      # Placeholder image — GitHub Actions owns the actual image tag.
       image = "us-docker.pkg.dev/cloudrun/container/hello"
 
       ports {
@@ -33,7 +33,7 @@ resource "google_cloud_run_v2_service" "worker" {
         }
       }
 
-      # --- Non-sensitive config ---
+      # --- Non-sensitive config (managed by Terraform) ---
       env {
         name  = "APP_ENV"
         value = var.environment
@@ -55,49 +55,17 @@ resource "google_cloud_run_v2_service" "worker" {
         value = var.api_url
       }
 
-      # --- Secrets from Secret Manager ---
-      env {
-        name = "DATABASE_URL"
-        value_source {
-          secret_key_ref {
-            secret  = "database-url"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "GITHUB_APP_PRIVATE_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "github-app-private-key"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "GITHUB_APP_WEBHOOK_SECRET"
-        value_source {
-          secret_key_ref {
-            secret  = "github-app-webhook-secret"
-            version = "latest"
-          }
-        }
-      }
-      env {
-        name = "HMAC_SIGNING_KEY"
-        value_source {
-          secret_key_ref {
-            secret  = "hmac-signing-key"
-            version = "latest"
-          }
-        }
-      }
+      # --- Secrets (managed by Doppler, injected at deploy time) ---
+      # The following env vars are set via `doppler run -- gcloud run services update`:
+      #   DATABASE_URL, GITHUB_APP_PRIVATE_KEY,
+      #   GITHUB_APP_WEBHOOK_SECRET, HMAC_SIGNING_KEY
     }
   }
 
   lifecycle {
     ignore_changes = [
       template[0].containers[0].image,
+      template[0].containers[0].env,
     ]
   }
 }
