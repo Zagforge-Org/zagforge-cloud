@@ -12,7 +12,7 @@ import (
 )
 
 const getLatestSnapshot = `-- name: GetLatestSnapshot :one
-SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at FROM snapshots
+SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at, metadata FROM snapshots
 WHERE repo_id = $1 AND branch = $2
 ORDER BY created_at DESC
 LIMIT 1
@@ -37,12 +37,13 @@ func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotPa
 		&i.ZigzagVersion,
 		&i.SizeBytes,
 		&i.CreatedAt,
+		&i.Metadata,
 	)
 	return i, err
 }
 
 const getSnapshotByID = `-- name: GetSnapshotByID :one
-SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at FROM snapshots WHERE id = $1
+SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at, metadata FROM snapshots WHERE id = $1
 `
 
 func (q *Queries) GetSnapshotByID(ctx context.Context, id pgtype.UUID) (Snapshot, error) {
@@ -59,12 +60,13 @@ func (q *Queries) GetSnapshotByID(ctx context.Context, id pgtype.UUID) (Snapshot
 		&i.ZigzagVersion,
 		&i.SizeBytes,
 		&i.CreatedAt,
+		&i.Metadata,
 	)
 	return i, err
 }
 
 const getSnapshotsByBranch = `-- name: GetSnapshotsByBranch :many
-SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at FROM snapshots
+SELECT id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at, metadata FROM snapshots
 WHERE repo_id = $1 AND branch = $2
 ORDER BY created_at DESC
 `
@@ -94,6 +96,7 @@ func (q *Queries) GetSnapshotsByBranch(ctx context.Context, arg GetSnapshotsByBr
 			&i.ZigzagVersion,
 			&i.SizeBytes,
 			&i.CreatedAt,
+			&i.Metadata,
 		); err != nil {
 			return nil, err
 		}
@@ -108,7 +111,7 @@ func (q *Queries) GetSnapshotsByBranch(ctx context.Context, arg GetSnapshotsByBr
 const insertSnapshot = `-- name: InsertSnapshot :one
 INSERT INTO snapshots (repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-RETURNING id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at
+RETURNING id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, zigzag_version, size_bytes, created_at, metadata
 `
 
 type InsertSnapshotParams struct {
@@ -145,6 +148,7 @@ func (q *Queries) InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) 
 		&i.ZigzagVersion,
 		&i.SizeBytes,
 		&i.CreatedAt,
+		&i.Metadata,
 	)
 	return i, err
 }

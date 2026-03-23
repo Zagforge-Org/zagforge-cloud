@@ -8,6 +8,27 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AiProviderKey struct {
+	ID        pgtype.UUID
+	OrgID     pgtype.UUID
+	Provider  string
+	KeyCipher []byte
+	KeyHint   string
+	CreatedAt pgtype.Timestamptz
+}
+
+type ContextToken struct {
+	ID               pgtype.UUID
+	RepoID           pgtype.UUID
+	OrgID            pgtype.UUID
+	TargetSnapshotID pgtype.UUID
+	TokenHash        string
+	Label            pgtype.Text
+	LastUsedAt       pgtype.Timestamptz
+	ExpiresAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+}
+
 type Job struct {
 	ID           pgtype.UUID
 	RepoID       pgtype.UUID
@@ -51,4 +72,5 @@ type Snapshot struct {
 	ZigzagVersion   string
 	SizeBytes       int64
 	CreatedAt       pgtype.Timestamptz
+	Metadata        []byte
 }
