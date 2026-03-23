@@ -19,6 +19,7 @@ const (
 	PUT    Method = "PUT"
 	DELETE Method = "DELETE"
 	PATCH  Method = "PATCH"
+	HEAD   Method = "HEAD"
 )
 
 type Subroute struct {
@@ -52,6 +53,7 @@ func (g *Group) Create(subroutes []Subroute) error {
 		PUT:    func(r chi.Router, p string, h http.HandlerFunc) { r.Put(p, h) },
 		DELETE: func(r chi.Router, p string, h http.HandlerFunc) { r.Delete(p, h) },
 		PATCH:  func(r chi.Router, p string, h http.HandlerFunc) { r.Patch(p, h) },
+		HEAD:   func(r chi.Router, p string, h http.HandlerFunc) { r.Head(p, h) },
 	}
 
 	register := func(r chi.Router) {
