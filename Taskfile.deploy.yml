@@ -48,7 +48,7 @@ tasks:
             vars: [SERVICE]
         cmds:
             - echo "Triggering deploy for {{.SERVICE}} to {{.ENV}}..."
-            - gh workflow run deploy-{{.SERVICE}}.yml -f environment={{.ENV}}
+            - gh workflow run deploy-{{.SERVICE}}.yml --ref main -f environment={{.ENV}}
             - echo "Deploy triggered. Watch at https://github.com/LegationPro/zagforge-mvp/actions"
 
     ship:all:
