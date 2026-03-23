@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/LegationPro/zagforge/api/internal/cache/contextcache"
 	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
+	"github.com/LegationPro/zagforge/api/internal/service/aiprovider"
 	"github.com/LegationPro/zagforge/api/internal/service/assembly"
 	"github.com/LegationPro/zagforge/api/internal/service/encryption"
 	"github.com/LegationPro/zagforge/api/internal/validate"
@@ -179,15 +179,11 @@ func (h *Handler) getOrAssembleContext(ctx context.Context, repo store.Repositor
 	return result, nil
 }
 
-// streamAI calls the selected provider and writes SSE chunks.
-// Each chunk: data: {text}\n\n
-func (h *Handler) streamAI(ctx context.Context, w http.ResponseWriter, provider, apiKey, prompt string) error {
-	// TODO: implement per-provider streaming using net/http directly.
-	// Anthropic: POST https://api.anthropic.com/v1/messages with stream:true
-	// OpenAI:    POST https://api.openai.com/v1/chat/completions with stream:true
-	_, _ = io.WriteString(w, "data: [ERROR] AI streaming not yet implemented\n\n")
-	if f, ok := w.(http.Flusher); ok {
-		f.Flush()
+// streamAI selects the AI provider and streams the response via SSE.
+func (h *Handler) streamAI(ctx context.Context, w http.ResponseWriter, providerName, apiKey, prompt string) error {
+	p, err := aiprovider.New(providerName)
+	if err != nil {
+		return err
 	}
-	return fmt.Errorf("streamAI: not implemented for %s", provider)
+	return p.Stream(ctx, w, apiKey, prompt)
 }
