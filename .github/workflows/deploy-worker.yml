@@ -78,11 +78,13 @@ jobs:
           cache-to: type=gha,scope=worker,mode=max
           platforms: linux/amd64
 
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
       - name: Sync Doppler secrets to Cloud Run
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_SERVICE_TOKEN }}
         run: |
-          curl -sL https://cli.doppler.com/install.sh | sh
           SECRETS=$(doppler secrets download \
             --token "$DOPPLER_TOKEN" \
             --format env-no-quotes \
