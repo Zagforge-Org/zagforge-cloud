@@ -36,6 +36,7 @@ resource "google_cloud_run_v2_service" "api" {
         name  = "APP_ENV"
         value = var.environment
       }
+      
       env {
         name  = "PORT"
         value = "8080"

@@ -8,32 +8,49 @@ This is the Open Core play: the flag lives in the open source Zigzag repo where 
 
 ## Open Source Placement
 
-- **Repo:** main Zigzag CLI repo (open source)
-- **Package:** `/internal/cloud/` — all upload logic is isolated here
-- **Coupling:** zero. The core Zigzag engine is unchanged. The flag is a thin wrapper:
+- **Repo:** main Zigzag CLI repo (open source) — written in Zig
+- **File:** `src/cli/handlers/upload.zig` — all upload logic is isolated here
+- **Coupling:** zero. The core Zigzag engine is unchanged. `--upload` is a standard flag handler, identical in shape to every other flag (e.g. `--json`, `--llm-report`).
 
-```go
-// cmd/root.go (simplified)
-if upload {
-    key := os.Getenv("ZAGFORGE_API_KEY")
-    if key == "" {
-        fmt.Fprintln(os.Stderr, "Run `zigzag login` or set ZAGFORGE_API_KEY to use cloud features.")
-        os.Exit(1)
-    }
-    if err := cloud.Upload(snapshot, key); err != nil {
-        fmt.Fprintf(os.Stderr, "Upload failed: %v\n", err)
-        os.Exit(1)
-    }
+**Step 1 — add `upload` field to `Config` in `src/cli/commands/config/config.zig`:**
+
+```zig
+pub const Config = struct {
+    // ... existing fields ...
+    upload: bool, // Upload snapshot to Zagforge cloud
+};
+```
+
+**Step 2 — register the flag in `src/cli/flags.zig`:**
+
+```zig
+const uploadHandler = @import("./handlers/upload.zig").handleUpload;
+
+pub const flags = [_]FlagsHandler{
+    // ... existing flags ...
+    .{ .name = "--upload", .takes_value = false, .handler = &uploadHandler },
+};
+```
+
+**Step 3 — implement `src/cli/handlers/upload.zig`:**
+
+```zig
+const std = @import("std");
+const Config = @import("../commands/config/config.zig").Config;
+
+pub fn handleUpload(cfg: *Config, allocator: std.mem.Allocator, _: ?[]const u8) anyerror!void {
+    _ = allocator;
+    cfg.upload = true;
 }
 ```
 
-The `cloud.Upload` function lives entirely in `/internal/cloud/`. Deleting that package would not break any other Zigzag feature.
+The actual HTTP upload call happens after the engine finishes, in the runner — `cfg.upload` is checked post-run the same way `cfg.json_output` triggers JSON report emission.
 
 ---
 
 ## What Is Sent
 
-`cloud.Upload` POSTs a `snapshot_version: 2` JSON payload — **no file contents**:
+The runner POSTs a `snapshot_version: 2` JSON payload — **no file contents**:
 
 ```json
 {
@@ -47,7 +64,7 @@ The `cloud.Upload` function lives entirely in `/internal/cloud/`. Deleting that 
     "commit_sha": "3fa912e1...",
     "branch": "main",
     "generated_at": "2026-03-21T12:00:00Z",
-    "summary": { "source_files": 42, "total_lines": 8500, ... },
+    "summary": { "source_files": 42, "total_lines": 8500 },
     "file_tree": [
       { "path": "cmd/api/main.go", "language": "go", "lines": 87, "sha": "abc123" }
     ]
