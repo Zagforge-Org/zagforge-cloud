@@ -85,6 +85,10 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_SERVICE_TOKEN }}
         run: |
+          if [ -z "$DOPPLER_TOKEN" ]; then
+            echo "::error::DOPPLER_SERVICE_TOKEN secret is not set. Add it in GitHub repo settings."
+            exit 1
+          fi
           SECRETS=$(doppler secrets download \
             --token "$DOPPLER_TOKEN" \
             --format env-no-quotes \
@@ -92,6 +96,10 @@ jobs:
             | grep -v '^DOPPLER_' \
             | grep -v '^PORT=' \
             | paste -sd, -)
+          if [ -z "$SECRETS" ]; then
+            echo "::error::Doppler returned no secrets. Check your service token."
+            exit 1
+          fi
           gcloud run services update ${{ env.SERVICE }} \
             --region ${{ env.REGION }} \
             --set-env-vars "$SECRETS" \
