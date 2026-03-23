@@ -14,7 +14,7 @@ var allEnvVars = []string{
 	"DATABASE_URL", "REDIS_URL",
 	"GCS_BUCKET", "GCS_ENDPOINT",
 	"CLOUD_TASKS_PROJECT", "CLOUD_TASKS_LOCATION", "CLOUD_TASKS_QUEUE", "CLOUD_TASKS_WORKER_URL", "CLOUD_TASKS_SERVICE_ACCOUNT",
-	"HMAC_SIGNING_KEY_PREV",
+	"HMAC_SIGNING_KEY_PREV", "CLI_API_KEY", "ENCRYPTION_KEY_BASE64",
 }
 
 // setEnv saves originals, sets the provided map, and unsets everything else in allEnvVars.
@@ -52,6 +52,8 @@ func validEnv() map[string]string {
 		"DATABASE_URL":              "postgres://localhost/test",
 		"REDIS_URL":                 "redis://localhost:6379",
 		"GCS_BUCKET":                "test-bucket",
+		"ENCRYPTION_KEY_BASE64":     "some-base64-key",
+		"CLI_API_KEY":               "zf_pk_random",
 	}
 }
 
@@ -92,6 +94,12 @@ func TestLoad_success(t *testing.T) {
 	if cfg.GCS.Bucket != "test-bucket" {
 		t.Errorf("expected GCS Bucket %q, got %q", "test-bucket", cfg.GCS.Bucket)
 	}
+	if cfg.App.EncryptionKeyBase64 != "some-base64-key" {
+		t.Errorf("expected EncryptionKeyBase64 %q, got %q", "some-base64-key", cfg.App.EncryptionKeyBase64)
+	}
+	if cfg.App.CLIAPIKey != "zf_pk_random" {
+		t.Errorf("expected CLIAPIKey %q, got %q", "zf_pk_random", cfg.App.CLIAPIKey)
+	}
 }
 
 func TestLoad_privateKeyNewlineConversion(t *testing.T) {
@@ -122,6 +130,8 @@ func TestLoad_missingRequired(t *testing.T) {
 		"DATABASE_URL",
 		"REDIS_URL",
 		"GCS_BUCKET",
+		"ENCRYPTION_KEY_BASE64",
+		"CLI_API_KEY",
 	}
 
 	for _, missing := range requiredVars {

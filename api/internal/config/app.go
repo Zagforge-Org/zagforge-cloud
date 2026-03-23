@@ -9,4 +9,6 @@ type AppConfig struct {
 	HMACSigningKey         string `env:"HMAC_SIGNING_KEY,required"`
 	HMACSigningKeyPrev     string `env:"HMAC_SIGNING_KEY_PREV"` // previous key for rotation grace period
 	WatchdogSecret         string `env:"WATCHDOG_SECRET,required"`
+	EncryptionKeyBase64    string `env:"ENCRYPTION_KEY_BASE64,required"`
+	CLIAPIKey              string `env:"CLI_API_KEY,required"`
 }
