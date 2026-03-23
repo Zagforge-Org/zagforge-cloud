@@ -2,9 +2,10 @@ package router_test
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"testing"
 
-	"github.com/LegationPro/zagforge-mvp-impl/shared/go/router"
+	"github.com/LegationPro/zagforge/shared/go/router"
 )
 
 func TestGroup_Create_registersAllMethods(t *testing.T) {
@@ -19,6 +20,7 @@ func TestGroup_Create_registersAllMethods(t *testing.T) {
 		{"PUT", router.PUT, http.MethodPut, "/g-put"},
 		{"DELETE", router.DELETE, http.MethodDelete, "/g-delete"},
 		{"PATCH", router.PATCH, http.MethodPatch, "/g-patch"},
+		{"HEAD", router.HEAD, http.MethodHead, "/g-head"},
 	}
 
 	for _, tt := range tests {
@@ -38,6 +40,22 @@ func TestGroup_Create_registersAllMethods(t *testing.T) {
 				t.Fatalf("expected 200 for %s %s, got %d", tt.http, tt.path, w.Code)
 			}
 		})
+	}
+}
+
+func TestHEADRoute(t *testing.T) {
+	r := router.New()
+	g := r.Group()
+	g.Create([]router.Subroute{
+		{Method: router.HEAD, Path: "/test", Handler: func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}},
+	})
+	req := httptest.NewRequest(http.MethodHead, "/test", nil)
+	w := httptest.NewRecorder()
+	r.Handler().ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Errorf("got %d, want 200", w.Code)
 	}
 }
 

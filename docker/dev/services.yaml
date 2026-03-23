@@ -1,0 +1,85 @@
+services:
+  migrate:
+    build:
+      context: ../..
+      dockerfile: api/Dockerfile.dev
+    command: >
+      migrate
+        -path /app/api/internal/db/migrations
+        -database postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
+        up
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../..
+      dockerfile: api/Dockerfile.dev
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../..:/app
+    environment:
+      # Docker-network overrides (Doppler has localhost versions).
+      DATABASE_URL: postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
+      REDIS_URL: redis://redis:6379/0
+      GCS_ENDPOINT: http://fake-gcs:4443/storage/v1/
+      # All other secrets injected by Doppler via `doppler run --`.
+      APP_ENV: ${APP_ENV}
+      PORT: ${PORT}
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_SLUG: ${GITHUB_APP_SLUG}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY}
+      HMAC_SIGNING_KEY: ${HMAC_SIGNING_KEY}
+      WATCHDOG_SECRET: ${WATCHDOG_SECRET}
+      ENCRYPTION_KEY_BASE64: ${ENCRYPTION_KEY_BASE64}
+      CLI_API_KEY: ${CLI_API_KEY}
+      GCS_BUCKET: ${GCS_BUCKET}
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/readyz || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 15s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      fake-gcs:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: worker/Dockerfile.dev
+    volumes:
+      - ../..:/app
+      - ../../.reports:/data/reports
+    environment:
+      # Docker-network overrides.
+      DATABASE_URL: postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
+      GCS_ENDPOINT: http://fake-gcs:4443/storage/v1/
+      API_BASE_URL: http://api:8080
+      # Doppler-injected.
+      APP_ENV: ${APP_ENV}
+      REPORTS_DIR: /data/reports
+      GITHUB_APP_ID: ${GITHUB_APP_ID}
+      GITHUB_APP_PRIVATE_KEY: ${GITHUB_APP_PRIVATE_KEY}
+      GITHUB_APP_WEBHOOK_SECRET: ${GITHUB_APP_WEBHOOK_SECRET}
+      GCS_BUCKET: ${GCS_BUCKET}
+      HMAC_SIGNING_KEY: ${HMAC_SIGNING_KEY}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      fake-gcs:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully

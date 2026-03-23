@@ -2,9 +2,20 @@ version: "3"
 
 vars:
     COMPOSE_FILE: docker-compose.dev.yaml
-    DC: docker compose -f {{.COMPOSE_FILE}}
+    DC: doppler run -- docker compose -f {{.COMPOSE_FILE}}
+
+includes:
+    deploy:
+        taskfile: Taskfile.deploy.yml
 
 tasks:
+    setup:
+        desc: One-time setup for new developers
+        cmds:
+            - git config core.hooksPath .githooks
+            - doppler setup --project zagforge --config dev
+            - echo "Git hooks + Doppler configured."
+
     build:
         desc: Run tests and build all binaries
         cmds:
@@ -28,7 +39,7 @@ tasks:
             - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && go test -v -race -cover ./api/... ./shared/go/... ./worker/...'"
 
     dev:
-        desc: Start all services in dev mode (postgres, migrations, api with hot-reload)
+        desc: Start all services in dev mode (secrets from Doppler)
         cmds:
             - "{{.DC}} up --build"
 
@@ -40,7 +51,7 @@ tasks:
     down:
         desc: Stop all services
         cmds:
-            - "{{.DC}} down"
+            - "docker compose -f {{.COMPOSE_FILE}} down"
 
     webhook:forward:
         desc: Forward GitHub webhooks to local server via smee.io
@@ -50,23 +61,23 @@ tasks:
     db:up:
         desc: Start local Postgres
         cmds:
-            - "{{.DC}} up -d postgres"
+            - "docker compose -f {{.COMPOSE_FILE}} up -d postgres"
 
     db:down:
         desc: Stop local Postgres
         cmds:
-            - "{{.DC}} down"
+            - "docker compose -f {{.COMPOSE_FILE}} down"
 
     migrate-up:
         desc: Run all pending migrations
         cmds:
-            - "{{.DC}} run --rm migrate"
+            - "docker compose -f {{.COMPOSE_FILE}} run --rm migrate"
 
     migrate-down:
         desc: Roll back the last migration
         cmds:
             - >
-                {{.DC}} run --rm migrate
+                docker compose -f {{.COMPOSE_FILE}} run --rm migrate
                 migrate
                   -path /app/api/internal/db/migrations
                   -database postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
@@ -77,19 +88,35 @@ tasks:
         vars:
             NAME: '{{.NAME | default "change"}}'
         cmds:
-            - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && migrate create -ext sql -dir api/internal/db/migrations -seq {{.NAME}}'"
+            - "docker compose -f {{.COMPOSE_FILE}} run --rm --no-deps api sh -c 'cd /app && migrate create -ext sql -dir api/internal/db/migrations -seq {{.NAME}}'"
+
+    db:shell:
+        desc: Open a psql shell to the local dev database
+        cmds:
+            - "docker compose -f {{.COMPOSE_FILE}} exec postgres psql -U zagforge -d zagforge"
 
     db:seed:
         desc: Seed dev database with test org and repo
         cmds:
-            - "{{.DC}} exec -T postgres psql -U zagforge -d zagforge -f /dev/stdin < api/internal/db/seed/dev.sql"
+            - "docker compose -f {{.COMPOSE_FILE}} exec -T postgres psql -U zagforge -d zagforge -f /dev/stdin < api/internal/db/seed/dev.sql"
 
     logs:
         desc: Tail logs for all services
         cmds:
-            - "{{.DC}} logs -f"
+            - "docker compose -f {{.COMPOSE_FILE}} logs -f"
 
     logs:api:
         desc: Tail logs for the API service
         cmds:
-            - "{{.DC}} logs -f api"
+            - "docker compose -f {{.COMPOSE_FILE}} logs -f api"
+
+    test:integration:
+        desc: Run integration tests (requires running Postgres + fake-gcs)
+        cmds:
+            - "docker compose -f {{.COMPOSE_FILE}} up -d postgres fake-gcs"
+            - "docker compose -f {{.COMPOSE_FILE}} run --rm migrate"
+            - go test -tags=integration -race -v ./api/internal/integration/...
+        env:
+            TEST_DATABASE_URL: postgres://zagforge:zagforge@localhost:5432/zagforge?sslmode=disable
+            TEST_GCS_ENDPOINT: http://localhost:4443/storage/v1/
+            TEST_GCS_BUCKET: zagforge-snapshots-test

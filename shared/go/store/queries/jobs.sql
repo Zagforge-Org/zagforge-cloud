@@ -51,3 +51,17 @@ SET status = $2,
     started_at    = CASE WHEN $2 = 'running' THEN now() ELSE started_at END,
     finished_at   = CASE WHEN $2 IN ('succeeded', 'failed', 'cancelled', 'superseded') THEN now() ELSE finished_at END
 WHERE id = $1;
+
+-- name: GetJobForUpdate :one
+SELECT * FROM jobs WHERE id = $1 FOR UPDATE;
+
+-- name: UpdateJobCommitSHA :exec
+UPDATE jobs SET commit_sha = $2 WHERE id = $1 AND status = 'queued';
+
+-- name: TimeoutRunningJobs :execrows
+UPDATE jobs
+SET status = 'failed',
+    error_message = 'Job timed out',
+    finished_at = now()
+WHERE status = 'running'
+  AND started_at < now() - make_interval(mins => $1::int);

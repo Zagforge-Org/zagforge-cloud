@@ -148,6 +148,29 @@ func (q *Queries) GetJobByID(ctx context.Context, id pgtype.UUID) (Job, error) {
 	return i, err
 }
 
+const getJobForUpdate = `-- name: GetJobForUpdate :one
+SELECT id, repo_id, branch, commit_sha, delivery_id, status, error_message, created_at, updated_at, started_at, finished_at FROM jobs WHERE id = $1 FOR UPDATE
+`
+
+func (q *Queries) GetJobForUpdate(ctx context.Context, id pgtype.UUID) (Job, error) {
+	row := q.db.QueryRow(ctx, getJobForUpdate, id)
+	var i Job
+	err := row.Scan(
+		&i.ID,
+		&i.RepoID,
+		&i.Branch,
+		&i.CommitSha,
+		&i.DeliveryID,
+		&i.Status,
+		&i.ErrorMessage,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.StartedAt,
+		&i.FinishedAt,
+	)
+	return i, err
+}
+
 const getRepoForJob = `-- name: GetRepoForJob :one
 SELECT r.id, r.github_repo_id, r.installation_id, r.full_name, r.default_branch
 FROM repositories r
@@ -231,6 +254,37 @@ WHERE id = $1
 
 func (q *Queries) MarkJobSuperseded(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, markJobSuperseded, id)
+	return err
+}
+
+const timeoutRunningJobs = `-- name: TimeoutRunningJobs :execrows
+UPDATE jobs
+SET status = 'failed',
+    error_message = 'Job timed out',
+    finished_at = now()
+WHERE status = 'running'
+  AND started_at < now() - make_interval(mins => $1::int)
+`
+
+func (q *Queries) TimeoutRunningJobs(ctx context.Context, dollar_1 int32) (int64, error) {
+	result, err := q.db.Exec(ctx, timeoutRunningJobs, dollar_1)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const updateJobCommitSHA = `-- name: UpdateJobCommitSHA :exec
+UPDATE jobs SET commit_sha = $2 WHERE id = $1 AND status = 'queued'
+`
+
+type UpdateJobCommitSHAParams struct {
+	ID        pgtype.UUID
+	CommitSha string
+}
+
+func (q *Queries) UpdateJobCommitSHA(ctx context.Context, arg UpdateJobCommitSHAParams) error {
+	_, err := q.db.Exec(ctx, updateJobCommitSHA, arg.ID, arg.CommitSha)
 	return err
 }
 

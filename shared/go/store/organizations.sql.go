@@ -26,6 +26,23 @@ func (q *Queries) GetOrgByClerkID(ctx context.Context, clerkOrgID string) (Organ
 	return i, err
 }
 
+const getOrganizationBySlug = `-- name: GetOrganizationBySlug :one
+SELECT id, clerk_org_id, slug, name, created_at FROM organizations WHERE slug = $1
+`
+
+func (q *Queries) GetOrganizationBySlug(ctx context.Context, slug string) (Organization, error) {
+	row := q.db.QueryRow(ctx, getOrganizationBySlug, slug)
+	var i Organization
+	err := row.Scan(
+		&i.ID,
+		&i.ClerkOrgID,
+		&i.Slug,
+		&i.Name,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const upsertOrg = `-- name: UpsertOrg :one
 INSERT INTO organizations (clerk_org_id, slug, name)
 VALUES ($1, $2, $3)

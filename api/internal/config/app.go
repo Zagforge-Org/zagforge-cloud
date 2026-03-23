@@ -1,43 +1,14 @@
 package config
 
-import (
-	"os"
-	"strconv"
-	"strings"
-)
-
 type AppConfig struct {
-	GithubAppID            int64
-	GithubAppPrivateKey    string
-	GithubAppWebhookSecret string
-}
-
-func LoadAppConfig() (*AppConfig, error) {
-	appIDStr := os.Getenv("GITHUB_APP_ID")
-	if appIDStr == "" {
-		return nil, notSetErr("GITHUB_APP_ID")
-	}
-
-	appID, err := strconv.ParseInt(appIDStr, 10, 64)
-	if err != nil {
-		return nil, notSetErr("GITHUB_APP_ID")
-	}
-
-	webhookSecret := os.Getenv("GITHUB_APP_WEBHOOK_SECRET")
-	if webhookSecret == "" {
-		return nil, notSetErr("GITHUB_APP_WEBHOOK_SECRET")
-	}
-
-	privateKeyStr := os.Getenv("GITHUB_APP_PRIVATE_KEY")
-	if privateKeyStr == "" {
-		return nil, notSetErr("GITHUB_APP_PRIVATE_KEY")
-	}
-	// Env vars often store PEM keys with literal \n instead of real newlines.
-	privateKeyStr = strings.ReplaceAll(privateKeyStr, `\n`, "\n")
-
-	return &AppConfig{
-		GithubAppID:            appID,
-		GithubAppPrivateKey:    privateKeyStr,
-		GithubAppWebhookSecret: webhookSecret,
-	}, nil
+	GithubAppID            int64  `env:"GITHUB_APP_ID,required"`
+	GithubAppSlug          string `env:"GITHUB_APP_SLUG,required"`
+	GithubAppPrivateKey    string `env:"GITHUB_APP_PRIVATE_KEY,required"`
+	GithubAppWebhookSecret string `env:"GITHUB_APP_WEBHOOK_SECRET,required"`
+	ClerkSecretKey         string `env:"CLERK_SECRET_KEY,required"`
+	HMACSigningKey         string `env:"HMAC_SIGNING_KEY,required"`
+	HMACSigningKeyPrev     string `env:"HMAC_SIGNING_KEY_PREV"` // previous key for rotation grace period
+	WatchdogSecret         string `env:"WATCHDOG_SECRET,required"`
+	EncryptionKeyBase64    string `env:"ENCRYPTION_KEY_BASE64,required"`
+	CLIAPIKey              string `env:"CLI_API_KEY,required"`
 }

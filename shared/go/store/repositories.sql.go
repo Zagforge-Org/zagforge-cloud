@@ -11,6 +11,30 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const getRepoByFullNameAndOrg = `-- name: GetRepoByFullNameAndOrg :one
+SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, installed_at FROM repositories WHERE full_name = $1 AND org_id = $2
+`
+
+type GetRepoByFullNameAndOrgParams struct {
+	FullName string
+	OrgID    pgtype.UUID
+}
+
+func (q *Queries) GetRepoByFullNameAndOrg(ctx context.Context, arg GetRepoByFullNameAndOrgParams) (Repository, error) {
+	row := q.db.QueryRow(ctx, getRepoByFullNameAndOrg, arg.FullName, arg.OrgID)
+	var i Repository
+	err := row.Scan(
+		&i.ID,
+		&i.OrgID,
+		&i.GithubRepoID,
+		&i.InstallationID,
+		&i.FullName,
+		&i.DefaultBranch,
+		&i.InstalledAt,
+	)
+	return i, err
+}
+
 const getRepoByGithubID = `-- name: GetRepoByGithubID :one
 SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, installed_at FROM repositories WHERE github_repo_id = $1
 `

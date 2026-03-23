@@ -1,0 +1,13 @@
+environment         = "dev"
+github_repo         = "LegationPro/zagforge-cloud"
+project_id          = "zagforge"
+region              = "us-central1"
+database_provider   = "neon"
+redis_provider      = "upstash"
+api_min_instances   = 0
+api_max_instances   = 2
+cloud_armor_enabled  = false
+github_app_id        = "3122231"
+github_app_slug      = "zagforge-zigzag-dev"
+api_url              = "https://zagforge-api-89960017575.us-central1.run.app"
+cors_allowed_origins = "http://localhost:3000"

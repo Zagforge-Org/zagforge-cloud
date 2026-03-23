@@ -19,3 +19,6 @@ WHERE org_id = $1
   AND full_name > $2
 ORDER BY full_name ASC
 LIMIT $3;
+
+-- name: GetRepoByFullNameAndOrg :one
+SELECT * FROM repositories WHERE full_name = $1 AND org_id = $2;

@@ -19,6 +19,7 @@ const (
 	PUT    Method = "PUT"
 	DELETE Method = "DELETE"
 	PATCH  Method = "PATCH"
+	HEAD   Method = "HEAD"
 )
 
 type Subroute struct {
@@ -29,16 +30,16 @@ type Subroute struct {
 
 type Group struct {
 	mux *chi.Mux
-	mw  func(http.Handler) http.Handler
+	mws []func(http.Handler) http.Handler
 }
 
 func NewGroup(mux *chi.Mux) *Group {
 	return &Group{mux: mux}
 }
 
-// Use sets the middleware applied to all subroutes in this group.
+// Use appends middleware to the group's middleware stack.
 func (g *Group) Use(mw func(http.Handler) http.Handler) {
-	g.mw = mw
+	g.mws = append(g.mws, mw)
 }
 
 // Create registers all subroutes on the group's mux.
@@ -52,6 +53,7 @@ func (g *Group) Create(subroutes []Subroute) error {
 		PUT:    func(r chi.Router, p string, h http.HandlerFunc) { r.Put(p, h) },
 		DELETE: func(r chi.Router, p string, h http.HandlerFunc) { r.Delete(p, h) },
 		PATCH:  func(r chi.Router, p string, h http.HandlerFunc) { r.Patch(p, h) },
+		HEAD:   func(r chi.Router, p string, h http.HandlerFunc) { r.Head(p, h) },
 	}
 
 	register := func(r chi.Router) {
@@ -66,9 +68,11 @@ func (g *Group) Create(subroutes []Subroute) error {
 		}
 	}
 
-	if g.mw != nil {
+	if len(g.mws) > 0 {
 		g.mux.Group(func(r chi.Router) {
-			r.Use(g.mw)
+			for _, mw := range g.mws {
+				r.Use(mw)
+			}
 			register(r)
 		})
 	} else {

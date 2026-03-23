@@ -48,6 +48,10 @@ func (r *Router) Patch(path string, handlerFn http.HandlerFunc) {
 	r.mux.Patch(path, handlerFn)
 }
 
+func (r *Router) Head(path string, handlerFn http.HandlerFunc) {
+	r.mux.Head(path, handlerFn)
+}
+
 // Handler returns the underlying http.Handler for use with http.Server.
 func (r *Router) Handler() http.Handler {
 	return r.mux

@@ -18,8 +18,9 @@ A cloud platform that connects to a developer's GitHub repo, automatically gener
 | **Phase 2** | Core Loop | API endpoints, authentication, job system, provider/worker, storage |
 | **Phase 3** | Infrastructure & Security | Networking (LB, Cloud Armor), rate limiting, security hardening, Terraform |
 | **Phase 4** | CI/CD & Production | GitHub Actions pipelines, deployment ops (rollbacks, canary, promotions), monitoring |
+| **Phase 5** | Context Proxy & Dashboard | CLI upload, Context URL, Query Console, Next.js dashboard (cloud.zagforge.com), AI provider integration, multi-tenancy |
 
-Future (not phased): Dashboard UI, billing, GitLab/Bitbucket providers, snapshot diffing, token analytics.
+Future (not phased): Analytics charts, Stripe billing, GitLab/Bitbucket providers, custom system prompts, PII scrubbing, vector search (RAG), token usage tracking, multi-region.
 
 ---
 
@@ -37,7 +38,8 @@ Future (not phased): Dashboard UI, billing, GitLab/Bitbucket providers, snapshot
 | Secret management (prod) | Google Secret Manager | Worker tokens, GitHub App keys, webhook secrets |
 | Secret management (dev) | Doppler | Team-shared secrets injection, no `.env` files with real values |
 | Config loading | `caarlos0/env` | Struct-based env parsing with validation, defaults, and required fields |
-| Dashboard | Next.js (separate deploy, future phase) | Rich interactivity, Clerk SDK |
+| Dashboard | Next.js (Turborepo monorepo, `apps/cloud`) | Rich interactivity, Clerk SDK, TanStack Query, Tailwind v4 |
+| Context cache | Redis LRU (in-memory, TTL 10 min) | Avoids redundant GitHub API calls during Query Console sessions |
 | Git provider | GitHub first | Provider-agnostic interface for future expansion |
 
 ---
@@ -93,7 +95,7 @@ Zagforge runs as separate Cloud Run services from day one. Each service is its o
 | `worker` | Job (on-demand) | `zagforge-platform/worker` | Snapshot engine — clone, run Zigzag, upload |
 | `shared/go` | — (library) | `zagforge-platform/shared/go` | Common Go packages (logger, config, server, etc.) |
 
-Future services (Phase 2+): `dashboard` (Next.js), `billing`, `metrics`.
+Phase 5 adds: `apps/cloud` (Next.js dashboard at cloud.zagforge.com, deployed via Vercel). Future services: `billing`, `metrics`.
 
 Each service has its own Docker image, `Dockerfile`, `Dockerfile.dev`, service account, and IAM permissions. Services communicate via HTTP/JSON callbacks (REST). gRPC may be adopted for internal communication in a future phase when stricter contracts or streaming are needed.
 
@@ -111,12 +113,15 @@ Each service has its own Docker image, `Dockerfile`, `Dockerfile.dev`, service a
 
 ## What Is NOT Phased (Future)
 
-- Dashboard UI (Next.js)
-- Billing/subscription management
+- Analytics charts (LOC trends, language breakdown) — data is in DB; no API/UI yet
+- Billing/subscription management (Stripe)
 - GitLab/Bitbucket providers (interface is ready)
-- Secret scrubbing
+- Custom system prompt UI in Query Console
+- PII scrubbing / secret detection before upload
 - Snapshot diffing
-- Token usage analytics
+- Token usage analytics and cost tracking
+- Vector database / semantic search (RAG)
+- Multi-model toggle in Query Console
 - Snapshot retention / automatic cleanup
 - Structured error codes/enums
 - gRPC migration for internal communication

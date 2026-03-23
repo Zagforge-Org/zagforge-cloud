@@ -7,3 +7,6 @@ RETURNING *;
 
 -- name: GetOrgByClerkID :one
 SELECT * FROM organizations WHERE clerk_org_id = $1;
+
+-- name: GetOrganizationBySlug :one
+SELECT * FROM organizations WHERE slug = $1;
