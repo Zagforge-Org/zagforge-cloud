@@ -170,8 +170,12 @@ func run() error {
 		return fmt.Errorf("register health routes: %w", err)
 	}
 
-	// GitHub App OAuth — no auth, redirects to GitHub and handles callback.
+	// GitHub App OAuth — no auth, rate limited by IP to prevent abuse.
 	authRoutes := r.Group()
+	authRoutes.Use(ratelimit.RateLimit(rdb, ratelimit.RateLimitConfig{
+		MaxRequests: 30,
+		Window:      1 * time.Minute,
+	}, "oauth", log))
 	if err := authRoutes.Create([]router.Subroute{
 		{Method: router.GET, Path: "/auth/github/install", Handler: githubAuthH.Install},
 		{Method: router.GET, Path: "/auth/github/callback", Handler: githubAuthH.Callback},

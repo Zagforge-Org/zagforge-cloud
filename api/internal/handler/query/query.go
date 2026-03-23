@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
@@ -93,8 +94,12 @@ func (h *Handler) Query(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache")
 	w.Header().Set("Connection", "keep-alive")
 
+	// 5-minute timeout for AI streaming — prevents hung connections.
+	streamCtx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
+	defer cancel()
+
 	prompt := fmt.Sprintf("%s\n\n---\n\n%s\n\n---\n\nUser: %s", SystemPrompt, contextMD, req.Question)
-	if err := h.streamAI(r.Context(), w, provider, string(rawKey), prompt); err != nil {
+	if err := h.streamAI(streamCtx, w, provider, string(rawKey), prompt); err != nil {
 		h.log.Error("stream ai", zap.Error(err), zap.String("provider", provider))
 	}
 }
