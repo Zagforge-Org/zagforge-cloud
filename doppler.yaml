@@ -1,0 +1,3 @@
+setup:
+  project: zagforge
+  config: dev
