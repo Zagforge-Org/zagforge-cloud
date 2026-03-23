@@ -8,4 +8,5 @@ type Worker interface {
 	GenerateCloneToken(ctx context.Context, installationID int64) (string, error)
 	CloneRepo(ctx context.Context, repoURL, ref, token, dst string) error
 	ListRepos(ctx context.Context, installationID int64) ([]Repo, error)
+	GetBlob(ctx context.Context, installationID int64, repoFullName, sha string) (string, error)
 }
