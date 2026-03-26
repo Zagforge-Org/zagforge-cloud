@@ -17,6 +17,7 @@ import (
 	"github.com/LegationPro/zagforge/auth/internal/db"
 	"github.com/LegationPro/zagforge/auth/internal/handler/health"
 	invitehandler "github.com/LegationPro/zagforge/auth/internal/handler/invite"
+	mfahandler "github.com/LegationPro/zagforge/auth/internal/handler/mfa"
 	oauthhandler "github.com/LegationPro/zagforge/auth/internal/handler/oauth"
 	orghandler "github.com/LegationPro/zagforge/auth/internal/handler/org"
 	sessionhandler "github.com/LegationPro/zagforge/auth/internal/handler/session"
@@ -108,6 +109,7 @@ func run() error {
 	userH := userhandler.NewHandler(database, log)
 	orgH := orghandler.NewHandler(database, auditSvc, log)
 	inviteH := invitehandler.NewHandler(database, auditSvc, log)
+	mfaH := mfahandler.NewHandler(database, tokenSvc, sessionSvc, encSvc, auditSvc, log)
 
 	// Parse public key for auth middleware.
 	pubKey := tokenSvc.PublicKey()
@@ -150,6 +152,15 @@ func run() error {
 		return fmt.Errorf("register refresh routes: %w", err)
 	}
 
+	// MFA challenge — no auth (uses mfa_challenge_token from OAuth callback).
+	mfaPublic := r.Group()
+	if err := mfaPublic.Create([]router.Subroute{
+		{Method: router.POST, Path: "/auth/mfa/totp/challenge", Handler: mfaH.Challenge},
+		{Method: router.POST, Path: "/auth/mfa/backup-codes/verify", Handler: mfaH.BackupCodeVerify},
+	}); err != nil {
+		return fmt.Errorf("register mfa challenge routes: %w", err)
+	}
+
 	// Authenticated routes.
 	authed := r.Group()
 	authed.Use(authmw.Auth(pubKey, tokenSvc.Issuer(), log))
@@ -158,6 +169,12 @@ func run() error {
 		{Method: router.POST, Path: "/auth/logout/all", Handler: sessionH.LogoutAll},
 		{Method: router.GET, Path: "/auth/sessions", Handler: sessionH.ListSessions},
 		{Method: router.DELETE, Path: "/auth/sessions/{sessionID}", Handler: sessionH.RevokeSession},
+
+		// MFA (authenticated — setup, verify, disable, regenerate codes).
+		{Method: router.POST, Path: "/auth/mfa/totp/setup", Handler: mfaH.Setup},
+		{Method: router.POST, Path: "/auth/mfa/totp/verify", Handler: mfaH.Verify},
+		{Method: router.POST, Path: "/auth/mfa/totp/disable", Handler: mfaH.Disable},
+		{Method: router.POST, Path: "/auth/mfa/backup-codes/generate", Handler: mfaH.RegenerateBackupCodes},
 
 		// User profile.
 		{Method: router.GET, Path: "/auth/me", Handler: userH.GetMe},
