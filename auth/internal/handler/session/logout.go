@@ -36,7 +36,7 @@ func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := claims.SubjectUUID()
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 

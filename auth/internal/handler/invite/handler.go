@@ -10,12 +10,8 @@ import (
 )
 
 var (
-	errInternal        = errors.New("internal error")
-	errInvalidUserID   = errors.New("invalid user id")
-	errInvalidOrgID    = errors.New("invalid org id")
 	errInvalidInviteID = errors.New("invalid invite id")
 	errInvalidToken    = errors.New("invalid or expired invite token")
-	errForbidden       = errors.New("admin or owner role required")
 	errMaxMembers      = errors.New("organization has reached its member limit")
 )
 

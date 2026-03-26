@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	"github.com/LegationPro/zagforge/auth/internal/service/token"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
@@ -37,7 +38,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.log.Error("get refresh token", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -60,7 +61,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	refreshTok, err := h.tokenSvc.GenerateRefreshToken()
 	if err != nil {
 		h.log.Error("generate refresh token", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -72,7 +73,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("store new refresh token", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	user, err := h.db.Queries.GetUserByID(r.Context(), rt.UserID)
 	if err != nil {
 		h.log.Error("get user for refresh", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -103,7 +104,7 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("issue access token", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

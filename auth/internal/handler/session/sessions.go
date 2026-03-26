@@ -23,14 +23,14 @@ func (h *Handler) ListSessions(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := claims.SubjectUUID()
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
 	sessions, err := h.db.Queries.ListActiveSessions(r.Context(), userID)
 	if err != nil {
 		h.log.Error("list sessions", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -78,7 +78,7 @@ func (h *Handler) RevokeSession(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := claims.SubjectUUID()
 	if sess.UserID != userID {
-		httputil.ErrResponse(w, http.StatusForbidden, errForbidden)
+		httputil.ErrResponse(w, http.StatusForbidden, handler.ErrForbidden)
 		return
 	}
 

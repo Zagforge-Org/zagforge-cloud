@@ -16,7 +16,7 @@ var errCannotUnlinkOnly = errors.New("cannot unlink the only identity")
 
 // ListIdentities returns the user's linked OAuth identities.
 func (h *Handler) ListIdentities(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
@@ -25,7 +25,7 @@ func (h *Handler) ListIdentities(w http.ResponseWriter, r *http.Request) {
 	identities, err := h.db.Queries.ListOAuthIdentitiesByUser(r.Context(), userID)
 	if err != nil {
 		h.log.Error("list identities", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -51,7 +51,7 @@ func (h *Handler) ListIdentities(w http.ResponseWriter, r *http.Request) {
 
 // UnlinkIdentity removes a linked OAuth provider from the user's account.
 func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
@@ -62,7 +62,7 @@ func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 	count, err := h.db.Queries.CountOAuthIdentitiesByUser(r.Context(), userID)
 	if err != nil {
 		h.log.Error("count identities", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	if count <= 1 {
@@ -75,7 +75,7 @@ func (h *Handler) UnlinkIdentity(w http.ResponseWriter, r *http.Request) {
 		Provider: provider,
 	}); err != nil {
 		h.log.Error("unlink identity", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

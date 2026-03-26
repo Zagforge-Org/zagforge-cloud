@@ -5,6 +5,7 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
@@ -17,19 +18,19 @@ type createResponse struct {
 
 // Create registers a new webhook subscription.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -47,7 +48,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	secret, err := generateSecret()
 	if err != nil {
 		h.log.Error("generate webhook secret", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -59,7 +60,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("create webhook", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

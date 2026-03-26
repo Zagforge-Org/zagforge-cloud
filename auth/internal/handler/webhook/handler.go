@@ -15,11 +15,7 @@ const (
 )
 
 var (
-	errInternal      = errors.New("internal error")
-	errInvalidUserID = errors.New("invalid user id")
-	errInvalidOrgID  = errors.New("invalid org id")
-	errInvalidID     = errors.New("invalid id")
-	errForbidden     = errors.New("admin or owner role required")
+	errInvalidID = errors.New("invalid id")
 )
 
 type Handler struct {

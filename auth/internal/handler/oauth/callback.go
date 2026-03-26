@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	oauthsvc "github.com/LegationPro/zagforge/auth/internal/service/oauth"
 	sessionsvc "github.com/LegationPro/zagforge/auth/internal/service/session"
@@ -62,7 +63,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	user, err := h.resolveUser(r.Context(), provider, userInfo)
 	if err != nil {
 		h.log.Error("resolve user", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -77,7 +78,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 		challengeToken, err := h.tokenSvc.IssueMFAChallengeToken(httputil.UUIDToString(user.ID))
 		if err != nil {
 			h.log.Error("issue mfa challenge", zap.Error(err))
-			httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+			httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 			return
 		}
 		redirectURL := oauthState.RedirectUri + "?mfa_required=true&mfa_token=" + challengeToken
@@ -88,7 +89,7 @@ func (h *Handler) Callback(w http.ResponseWriter, r *http.Request) {
 	// Create session and issue tokens.
 	if err := h.issueTokensAndRedirect(w, r, user, oauthState.RedirectUri); err != nil {
 		h.log.Error("issue tokens", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

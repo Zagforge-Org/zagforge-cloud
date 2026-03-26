@@ -16,11 +16,8 @@ var (
 	errInvalidRefreshToken = errors.New("invalid refresh token")
 	errRefreshTokenExpired = errors.New("refresh token expired or revoked")
 	errSessionExpired      = errors.New("session expired or revoked")
-	errInvalidUserID       = errors.New("invalid user id")
 	errInvalidSessionID    = errors.New("invalid session id")
 	errSessionNotFound     = errors.New("session not found")
-	errForbidden           = errors.New("forbidden")
-	errInternal            = errors.New("internal error")
 )
 
 type Handler struct {

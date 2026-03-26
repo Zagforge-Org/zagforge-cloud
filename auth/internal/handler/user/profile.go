@@ -7,15 +7,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
-	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 // GetMe returns the authenticated user's profile.
 func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
@@ -24,7 +24,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 	user, err := h.db.Queries.GetUserByID(r.Context(), userID)
 	if err != nil {
 		h.log.Error("get user", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (h *Handler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 // UpdateMe updates the authenticated user's profile.
 func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
@@ -86,7 +86,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("update profile", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -95,7 +95,7 @@ func (h *Handler) UpdateMe(w http.ResponseWriter, r *http.Request) {
 
 // UpdateOnboarding updates the user's onboarding step.
 func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
@@ -117,17 +117,9 @@ func (h *Handler) UpdateOnboarding(w http.ResponseWriter, r *http.Request) {
 		OnboardingStep: body.Step,
 	}); err != nil {
 		h.log.Error("update onboarding", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
 	httputil.WriteJSON(w, http.StatusOK, updateOnboardingResponse{OnboardingStep: body.Step})
-}
-
-func userIDFromContext(r *http.Request) (pgtype.UUID, error) {
-	claims, err := authclaims.FromContext(r.Context())
-	if err != nil {
-		return pgtype.UUID{}, err
-	}
-	return claims.SubjectUUID()
 }

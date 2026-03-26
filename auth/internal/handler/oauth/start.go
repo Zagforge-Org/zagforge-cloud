@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
@@ -31,7 +32,7 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 	state, err := generateState()
 	if err != nil {
 		h.log.Error("generate oauth state", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -43,7 +44,7 @@ func (h *Handler) Start(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("store oauth state", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

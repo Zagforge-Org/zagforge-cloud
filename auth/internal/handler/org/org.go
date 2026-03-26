@@ -3,23 +3,22 @@ package org
 import (
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/auth/internal/handler"
+	"github.com/LegationPro/zagforge/auth/internal/role"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
-	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 // Create creates a new organization and adds the user as owner.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -39,18 +38,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("create org", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
 	_, err = h.db.Queries.CreateOrgMembership(r.Context(), authstore.CreateOrgMembershipParams{
 		OrgID:  org.ID,
 		UserID: userID,
-		Role:   RoleOwner,
+		Role:   role.OrgOwner,
 	})
 	if err != nil {
 		h.log.Error("create owner membership", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -66,16 +65,16 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // List returns all organizations the user belongs to.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
 	orgs, err := h.db.Queries.ListUserOrganizations(r.Context(), userID)
 	if err != nil {
 		h.log.Error("list orgs", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -89,9 +88,9 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // Get returns a single organization by ID.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
@@ -106,19 +105,19 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 
 // Update updates an organization. Requires admin or owner role.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireRole(r.Context(), orgID, userID, RoleOwner, RoleAdmin); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, userID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -141,7 +140,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("update org", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -157,26 +156,26 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete deletes an organization. Owner only.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireRole(r.Context(), orgID, userID, RoleOwner); err != nil {
+	if err := h.requireOwner(r, orgID, userID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
 	if err := h.db.Queries.DeleteOrganization(r.Context(), orgID); err != nil {
 		h.log.Error("delete org", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -190,18 +189,17 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 	httputil.WriteJSON(w, http.StatusOK, handler.StatusResponse{Status: "deleted"})
 }
 
-func userIDFromContext(r *http.Request) (pgtype.UUID, error) {
-	claims, err := authclaims.FromContext(r.Context())
+// requireOwner checks that the user is the org owner.
+func (h *Handler) requireOwner(r *http.Request, orgID, userID pgtype.UUID) error {
+	membership, err := h.db.Queries.GetOrgMembership(r.Context(), authstore.GetOrgMembershipParams{
+		OrgID:  orgID,
+		UserID: userID,
+	})
 	if err != nil {
-		return pgtype.UUID{}, err
+		return handler.ErrForbidden
 	}
-	return claims.SubjectUUID()
-}
-
-func parseOrgID(r *http.Request) (pgtype.UUID, error) {
-	var id pgtype.UUID
-	if err := id.Scan(chi.URLParam(r, "orgID")); err != nil {
-		return id, err
+	if membership.Role != role.OrgOwner {
+		return errNotOwner
 	}
-	return id, nil
+	return nil
 }

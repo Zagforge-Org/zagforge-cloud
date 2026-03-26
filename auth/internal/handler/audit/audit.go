@@ -2,34 +2,31 @@ package audit
 
 import (
 	"net/http"
-	"slices"
 	"time"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
-	"github.com/LegationPro/zagforge/auth/internal/role"
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
-	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 // List returns audit logs for an org, paginated by cursor.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrg)
 		return
 	}
 
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -64,7 +61,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		h.log.Error("list audit logs", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -87,19 +84,19 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // LoginMetrics returns daily login counts for an org.
 func (h *Handler) LoginMetrics(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrg)
 		return
 	}
 
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -113,7 +110,7 @@ func (h *Handler) LoginMetrics(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("login metrics", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -130,19 +127,19 @@ func (h *Handler) LoginMetrics(w http.ResponseWriter, r *http.Request) {
 
 // FailedLoginMetrics returns daily failed login counts.
 func (h *Handler) FailedLoginMetrics(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrg)
 		return
 	}
 
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusUnauthorized, err)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -155,7 +152,7 @@ func (h *Handler) FailedLoginMetrics(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("failed login metrics", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -168,36 +165,6 @@ func (h *Handler) FailedLoginMetrics(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httputil.OkResponse(w, result)
-}
-
-func parseOrgID(r *http.Request) (pgtype.UUID, error) {
-	var id pgtype.UUID
-	if err := id.Scan(chi.URLParam(r, "orgID")); err != nil {
-		return id, err
-	}
-	return id, nil
-}
-
-func userIDFromContext(r *http.Request) (pgtype.UUID, error) {
-	claims, err := authclaims.FromContext(r.Context())
-	if err != nil {
-		return pgtype.UUID{}, err
-	}
-	return claims.SubjectUUID()
-}
-
-func (h *Handler) requireOrgAdminOrOwner(r *http.Request, orgID, userID pgtype.UUID) error {
-	membership, err := h.db.Queries.GetOrgMembership(r.Context(), authstore.GetOrgMembershipParams{
-		OrgID:  orgID,
-		UserID: userID,
-	})
-	if err != nil {
-		return errForbidden
-	}
-	if !slices.Contains(role.OrgAdminOrAbove, membership.Role) {
-		return errForbidden
-	}
-	return nil
 }
 
 func parseDateRange(r *http.Request) (pgtype.Timestamptz, pgtype.Timestamptz) {

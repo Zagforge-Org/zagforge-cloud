@@ -10,17 +10,8 @@ import (
 )
 
 var (
-	errInternal      = errors.New("internal error")
-	errInvalidUserID = errors.New("invalid user id")
-	errInvalidOrgID  = errors.New("invalid org id")
 	errInvalidTeamID = errors.New("invalid team id")
 	errTeamNotFound  = errors.New("team not found")
-	errForbidden     = errors.New("admin or owner role required")
-)
-
-const (
-	RoleLead   = "lead"
-	RoleMember = "member"
 )
 
 type Handler struct {

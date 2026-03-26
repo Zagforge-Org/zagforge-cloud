@@ -13,25 +13,25 @@ import (
 
 // Update updates a webhook subscription.
 func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	whID, err := parseWebhookID(r)
+	whID, err := handler.ParseUUIDParam(r, "whID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -54,7 +54,7 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("update webhook", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -63,32 +63,32 @@ func (h *Handler) Update(w http.ResponseWriter, r *http.Request) {
 
 // Delete removes a webhook subscription.
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	whID, err := parseWebhookID(r)
+	whID, err := handler.ParseUUIDParam(r, "whID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
 	if err := h.db.Queries.DeleteWebhookSubscription(r.Context(), whID); err != nil {
 		h.log.Error("delete webhook", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

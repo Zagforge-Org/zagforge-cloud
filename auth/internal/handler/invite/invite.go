@@ -4,7 +4,6 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -12,12 +11,10 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/auth/internal/handler"
-	"github.com/LegationPro/zagforge/auth/internal/role"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	"github.com/LegationPro/zagforge/auth/internal/service/token"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
-	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
@@ -25,19 +22,19 @@ const inviteTTL = 7 * 24 * time.Hour // 7 days
 
 // Create creates a new invite. Requires admin or owner role.
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -55,12 +52,12 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	// Check member limit.
 	org, err := h.db.Queries.GetOrganizationByID(r.Context(), orgID)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	count, err := h.db.Queries.CountOrgMembers(r.Context(), orgID)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	if int32(count) >= org.MaxMembers {
@@ -71,7 +68,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	rawToken, err := generateInviteToken()
 	if err != nil {
 		h.log.Error("generate invite token", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -85,7 +82,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("create invite", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -111,16 +108,16 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 
 // ListOrgInvites returns all invites for an org.
 func (h *Handler) ListOrgInvites(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
 	invites, err := h.db.Queries.ListOrgInvites(r.Context(), orgID)
 	if err != nil {
 		h.log.Error("list invites", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -134,19 +131,19 @@ func (h *Handler) ListOrgInvites(w http.ResponseWriter, r *http.Request) {
 
 // Revoke revokes a pending invite. Requires admin or owner.
 func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -162,7 +159,7 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 		OrgID: orgID,
 	}); err != nil {
 		h.log.Error("revoke invite", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -178,9 +175,9 @@ func (h *Handler) Revoke(w http.ResponseWriter, r *http.Request) {
 
 // Accept accepts an invite by token. The authenticated user is added to the org.
 func (h *Handler) Accept(w http.ResponseWriter, r *http.Request) {
-	userID, err := userIDFromContext(r)
+	userID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -205,12 +202,12 @@ func (h *Handler) Accept(w http.ResponseWriter, r *http.Request) {
 	// Check member limit.
 	org, err := h.db.Queries.GetOrganizationByID(r.Context(), inv.OrgID)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	count, err := h.db.Queries.CountOrgMembers(r.Context(), inv.OrgID)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	if int32(count) >= org.MaxMembers {
@@ -221,7 +218,7 @@ func (h *Handler) Accept(w http.ResponseWriter, r *http.Request) {
 	// Mark invite as accepted.
 	if _, err := h.db.Queries.AcceptInvite(r.Context(), inv.ID); err != nil {
 		h.log.Error("accept invite", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -233,7 +230,7 @@ func (h *Handler) Accept(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("create membership from invite", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -260,7 +257,7 @@ func (h *Handler) GetByToken(w http.ResponseWriter, r *http.Request) {
 
 	org, err := h.db.Queries.GetOrganizationByID(r.Context(), inv.OrgID)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -279,36 +276,6 @@ func (h *Handler) GetByToken(w http.ResponseWriter, r *http.Request) {
 		Role:      inv.Role,
 		ExpiresAt: inv.ExpiresAt.Time.Format(time.RFC3339),
 	})
-}
-
-func userIDFromContext(r *http.Request) (pgtype.UUID, error) {
-	claims, err := authclaims.FromContext(r.Context())
-	if err != nil {
-		return pgtype.UUID{}, err
-	}
-	return claims.SubjectUUID()
-}
-
-func parseOrgID(r *http.Request) (pgtype.UUID, error) {
-	var id pgtype.UUID
-	if err := id.Scan(chi.URLParam(r, "orgID")); err != nil {
-		return id, err
-	}
-	return id, nil
-}
-
-func (h *Handler) requireAdminOrOwner(r *http.Request, orgID, userID pgtype.UUID) error {
-	membership, err := h.db.Queries.GetOrgMembership(r.Context(), authstore.GetOrgMembershipParams{
-		OrgID:  orgID,
-		UserID: userID,
-	})
-	if err != nil {
-		return errForbidden
-	}
-	if !slices.Contains(role.OrgAdminOrAbove, membership.Role) {
-		return errForbidden
-	}
-	return nil
 }
 
 func generateInviteToken() (string, error) {

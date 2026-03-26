@@ -9,9 +9,7 @@ import (
 )
 
 var (
-	errInternal    = errors.New("internal error")
 	errInvalidOrg  = errors.New("invalid org id")
-	errForbidden   = errors.New("admin or owner role required")
 	errInvalidDate = errors.New("invalid date format, expected RFC3339")
 )
 

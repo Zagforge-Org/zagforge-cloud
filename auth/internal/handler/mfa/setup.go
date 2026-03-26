@@ -35,7 +35,7 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	key, err := mfasvc.GenerateTOTPKey(email)
 	if err != nil {
 		h.log.Error("generate totp key", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -43,7 +43,7 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	encSecret, err := h.encSvc.Encrypt([]byte(key.Secret))
 	if err != nil {
 		h.log.Error("encrypt totp secret", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -54,7 +54,7 @@ func (h *Handler) Setup(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("upsert mfa settings", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -90,7 +90,7 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.log.Error("get mfa settings", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	if settings.TotpEnabled {
@@ -102,7 +102,7 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	secret, err := h.encSvc.Decrypt(settings.TotpSecret)
 	if err != nil {
 		h.log.Error("decrypt totp secret", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -114,7 +114,7 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	// Enable MFA.
 	if err := h.db.Queries.EnableTOTP(r.Context(), userID); err != nil {
 		h.log.Error("enable totp", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -122,7 +122,7 @@ func (h *Handler) Verify(w http.ResponseWriter, r *http.Request) {
 	codes, err := generateAndStoreBackupCodes(r, h.db.Queries, userID)
 	if err != nil {
 		h.log.Error("generate backup codes", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -151,7 +151,7 @@ func (h *Handler) Disable(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.db.Queries.DisableTOTP(r.Context(), userID); err != nil {
 		h.log.Error("disable totp", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

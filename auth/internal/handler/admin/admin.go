@@ -4,8 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/auth/internal/handler"
@@ -30,14 +28,14 @@ func (h *Handler) ListUsers(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("list users", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
 	total, err := h.db.Queries.CountUsers(r.Context())
 	if err != nil {
 		h.log.Error("count users", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -56,7 +54,7 @@ func (h *Handler) GetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := parseID(r, "userID")
+	userID, err := handler.ParseUUIDParam(r, "userID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
@@ -78,7 +76,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, err := parseID(r, "userID")
+	userID, err := handler.ParseUUIDParam(r, "userID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
@@ -96,7 +94,7 @@ func (h *Handler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 			IsPlatformAdmin: *body.IsPlatformAdmin,
 		}); err != nil {
 			h.log.Error("update platform admin", zap.Error(err))
-			httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+			httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 			return
 		}
 	}
@@ -119,14 +117,14 @@ func (h *Handler) ListOrgs(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("list orgs", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
 	total, err := h.db.Queries.CountOrganizations(r.Context())
 	if err != nil {
 		h.log.Error("count orgs", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -145,7 +143,7 @@ func (h *Handler) UpdateOrgPlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	orgID, err := parseID(r, "orgID")
+	orgID, err := handler.ParseUUIDParam(r, "orgID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
@@ -168,7 +166,7 @@ func (h *Handler) UpdateOrgPlan(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("update org plan", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -196,14 +194,6 @@ func (h *Handler) requirePlatformAdmin(r *http.Request) error {
 	}
 
 	return nil
-}
-
-func parseID(r *http.Request, param string) (pgtype.UUID, error) {
-	var id pgtype.UUID
-	if err := id.Scan(chi.URLParam(r, param)); err != nil {
-		return id, err
-	}
-	return id, nil
 }
 
 func parsePagination(r *http.Request) (int32, int32) {

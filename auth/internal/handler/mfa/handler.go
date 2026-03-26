@@ -13,7 +13,6 @@ import (
 )
 
 var (
-	errInternal         = errors.New("internal error")
 	errInvalidCode      = errors.New("invalid TOTP code")
 	errInvalidBackup    = errors.New("invalid backup code")
 	errMFANotEnabled    = errors.New("MFA is not enabled")

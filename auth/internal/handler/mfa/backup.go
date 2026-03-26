@@ -7,6 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	mfasvc "github.com/LegationPro/zagforge/auth/internal/service/mfa"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
@@ -29,7 +30,7 @@ func (h *Handler) RegenerateBackupCodes(w http.ResponseWriter, r *http.Request) 
 	codes, err := generateAndStoreBackupCodes(r, h.db.Queries, userID)
 	if err != nil {
 		h.log.Error("regenerate backup codes", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

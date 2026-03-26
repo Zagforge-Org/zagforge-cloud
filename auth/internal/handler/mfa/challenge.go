@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	mfasvc "github.com/LegationPro/zagforge/auth/internal/service/mfa"
 	sessionsvc "github.com/LegationPro/zagforge/auth/internal/service/session"
@@ -58,7 +59,7 @@ func (h *Handler) Challenge(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		h.log.Error("get mfa settings", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 	if !settings.TotpEnabled {
@@ -69,7 +70,7 @@ func (h *Handler) Challenge(w http.ResponseWriter, r *http.Request) {
 	secret, err := h.encSvc.Decrypt(settings.TotpSecret)
 	if err != nil {
 		h.log.Error("decrypt totp secret", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -81,7 +82,7 @@ func (h *Handler) Challenge(w http.ResponseWriter, r *http.Request) {
 	// MFA verified — issue tokens.
 	if err := h.issueTokens(w, r, userID); err != nil {
 		h.log.Error("issue tokens after mfa", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -121,7 +122,7 @@ func (h *Handler) BackupCodeVerify(w http.ResponseWriter, r *http.Request) {
 	codes, err := h.db.Queries.ListUnusedBackupCodes(r.Context(), userID)
 	if err != nil {
 		h.log.Error("list backup codes", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -140,7 +141,7 @@ func (h *Handler) BackupCodeVerify(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.issueTokens(w, r, userID); err != nil {
 		h.log.Error("issue tokens after backup", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

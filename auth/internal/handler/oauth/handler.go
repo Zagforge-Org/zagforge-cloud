@@ -19,7 +19,6 @@ var (
 	errInvalidState        = errors.New("invalid or expired state")
 	errStateMismatch       = errors.New("state provider mismatch")
 	errOAuthExchangeFailed = errors.New("oauth exchange failed")
-	errInternal            = errors.New("internal error")
 )
 
 type Handler struct {

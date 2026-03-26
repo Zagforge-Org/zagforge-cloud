@@ -10,6 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/auth/internal/db"
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
@@ -118,7 +119,7 @@ func TestUpdateOnboarding_noClaims_returns401(t *testing.T) {
 
 func TestUserIDFromContext_noClaims(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
-	_, err := userIDFromContext(r)
+	_, err := handler.UserIDFromContext(r)
 	if err == nil {
 		t.Fatal("expected error with no claims")
 	}
@@ -130,7 +131,7 @@ func TestUserIDFromContext_invalidSubject(t *testing.T) {
 	claims.Subject = "not-a-uuid"
 	r = r.WithContext(authclaims.NewContext(context.Background(), claims))
 
-	_, err := userIDFromContext(r)
+	_, err := handler.UserIDFromContext(r)
 	if err == nil {
 		t.Fatal("expected error for non-UUID subject")
 	}

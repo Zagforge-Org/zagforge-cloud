@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/auth/internal/handler"
+	"github.com/LegationPro/zagforge/auth/internal/role"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/auth/internal/validate"
@@ -17,16 +17,16 @@ import (
 
 // ListMembers returns all members of an organization.
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
 	members, err := h.db.Queries.ListOrgMembers(r.Context(), orgID)
 	if err != nil {
 		h.log.Error("list members", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -40,26 +40,26 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 
 // UpdateMemberRole updates a member's role. Requires owner or admin.
 func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireRole(r.Context(), orgID, actorID, RoleOwner, RoleAdmin); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
-	var targetUserID pgtype.UUID
-	if err := targetUserID.Scan(chi.URLParam(r, "userID")); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+	targetUserID, err := handler.ParseUUIDParam(r, "userID")
+	if err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -82,7 +82,7 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusNotFound, errMemberNotFound)
 		return
 	}
-	if existing.Role == RoleOwner {
+	if existing.Role == role.OrgOwner {
 		httputil.ErrResponse(w, http.StatusForbidden, errCannotRemoveOwner)
 		return
 	}
@@ -93,7 +93,7 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 		Role:   body.Role,
 	}); err != nil {
 		h.log.Error("update member role", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -112,26 +112,26 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 
 // RemoveMember removes a member from the organization. Requires owner or admin.
 func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireRole(r.Context(), orgID, actorID, RoleOwner, RoleAdmin); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
-	var targetUserID pgtype.UUID
-	if err := targetUserID.Scan(chi.URLParam(r, "userID")); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+	targetUserID, err := handler.ParseUUIDParam(r, "userID")
+	if err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -144,7 +144,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusNotFound, errMemberNotFound)
 		return
 	}
-	if existing.Role == RoleOwner {
+	if existing.Role == role.OrgOwner {
 		httputil.ErrResponse(w, http.StatusForbidden, errCannotRemoveOwner)
 		return
 	}
@@ -154,7 +154,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		UserID: targetUserID,
 	}); err != nil {
 		h.log.Error("remove member", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -172,19 +172,19 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 // TransferOwnership transfers org ownership to another member. Owner only.
 func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	if err := h.requireRole(r.Context(), orgID, actorID, RoleOwner); err != nil {
+	if err := h.requireOwner(r, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -201,7 +201,7 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 
 	var newOwnerID pgtype.UUID
 	if err := newOwnerID.Scan(body.NewOwnerID); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -218,20 +218,20 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 	if err := h.db.Queries.UpdateOrgMemberRole(r.Context(), authstore.UpdateOrgMemberRoleParams{
 		OrgID:  orgID,
 		UserID: newOwnerID,
-		Role:   RoleOwner,
+		Role:   role.OrgOwner,
 	}); err != nil {
 		h.log.Error("promote new owner", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
 	if err := h.db.Queries.UpdateOrgMemberRole(r.Context(), authstore.UpdateOrgMemberRoleParams{
 		OrgID:  orgID,
 		UserID: actorID,
-		Role:   RoleAdmin,
+		Role:   role.OrgAdmin,
 	}); err != nil {
 		h.log.Error("demote old owner", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

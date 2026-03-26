@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
@@ -17,7 +16,7 @@ import (
 
 // ListMembers returns all members of a team.
 func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
-	teamID, err := parseTeamID(r)
+	teamID, err := handler.ParseUUIDParam(r, "teamID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidTeamID)
 		return
@@ -26,7 +25,7 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	members, err := h.db.Queries.ListTeamMembers(r.Context(), teamID)
 	if err != nil {
 		h.log.Error("list team members", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -39,25 +38,25 @@ func (h *Handler) ListMembers(w http.ResponseWriter, r *http.Request) {
 
 // AddMember adds a user to a team. Requires org admin or owner.
 func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	teamID, err := parseTeamID(r)
+	teamID, err := handler.ParseUUIDParam(r, "teamID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidTeamID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
@@ -74,7 +73,7 @@ func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 
 	var targetUserID pgtype.UUID
 	if err := targetUserID.Scan(body.UserID); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -85,7 +84,7 @@ func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("add team member", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -104,32 +103,32 @@ func (h *Handler) AddMember(w http.ResponseWriter, r *http.Request) {
 
 // RemoveMember removes a user from a team. Requires org admin or owner.
 func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	teamID, err := parseTeamID(r)
+	teamID, err := handler.ParseUUIDParam(r, "teamID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidTeamID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
-	var targetUserID pgtype.UUID
-	if err := targetUserID.Scan(chi.URLParam(r, "userID")); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+	targetUserID, err := handler.ParseUUIDParam(r, "userID")
+	if err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -138,7 +137,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		UserID: targetUserID,
 	}); err != nil {
 		h.log.Error("remove team member", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -156,32 +155,32 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 
 // UpdateMemberRole changes a team member's role. Requires org admin or owner.
 func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
-	actorID, err := userIDFromContext(r)
+	actorID, err := handler.UserIDFromContext(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusUnauthorized, errInvalidUserID)
+		httputil.ErrResponse(w, http.StatusUnauthorized, handler.ErrInvalidUserID)
 		return
 	}
 
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
-	teamID, err := parseTeamID(r)
+	teamID, err := handler.ParseUUIDParam(r, "teamID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidTeamID)
 		return
 	}
 
-	if err := h.requireOrgAdminOrOwner(r, orgID, actorID); err != nil {
+	if err := handler.RequireOrgAdminOrOwner(r, h.db, orgID, actorID); err != nil {
 		httputil.ErrResponse(w, http.StatusForbidden, err)
 		return
 	}
 
-	var targetUserID pgtype.UUID
-	if err := targetUserID.Scan(chi.URLParam(r, "userID")); err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidUserID)
+	targetUserID, err := handler.ParseUUIDParam(r, "userID")
+	if err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidUserID)
 		return
 	}
 
@@ -201,7 +200,7 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 		Role:   body.Role,
 	}); err != nil {
 		h.log.Error("update team member role", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

@@ -5,22 +5,23 @@ import (
 
 	"go.uber.org/zap"
 
+	"github.com/LegationPro/zagforge/auth/internal/handler"
 	authstore "github.com/LegationPro/zagforge/auth/internal/store"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 )
 
 // List returns all webhook subscriptions for an org.
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	orgID, err := parseOrgID(r)
+	orgID, err := handler.ParseOrgID(r)
 	if err != nil {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidOrgID)
+		httputil.ErrResponse(w, http.StatusBadRequest, handler.ErrInvalidOrgID)
 		return
 	}
 
 	subs, err := h.db.Queries.ListWebhookSubscriptions(r.Context(), orgID)
 	if err != nil {
 		h.log.Error("list webhooks", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 
@@ -33,7 +34,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 
 // ListDeliveries returns delivery history for a webhook.
 func (h *Handler) ListDeliveries(w http.ResponseWriter, r *http.Request) {
-	whID, err := parseWebhookID(r)
+	whID, err := handler.ParseUUIDParam(r, "whID")
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidID)
 		return
@@ -45,7 +46,7 @@ func (h *Handler) ListDeliveries(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		h.log.Error("list deliveries", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, errInternal)
+		httputil.ErrResponse(w, http.StatusInternalServerError, handler.ErrInternal)
 		return
 	}
 

@@ -9,7 +9,6 @@ import (
 )
 
 var (
-	errInternal     = errors.New("internal error")
 	errForbidden    = errors.New("platform admin required")
 	errInvalidID    = errors.New("invalid id")
 	errUserNotFound = errors.New("user not found")
