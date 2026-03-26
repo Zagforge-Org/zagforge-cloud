@@ -12,6 +12,83 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countFailedLoginsByDay = `-- name: CountFailedLoginsByDay :many
+SELECT date_trunc('day', created_at)::date AS day, count(*) AS total
+FROM failed_login_attempts
+WHERE created_at >= $1 AND created_at <= $2
+GROUP BY day
+ORDER BY day DESC
+`
+
+type CountFailedLoginsByDayParams struct {
+	CreatedAt   pgtype.Timestamptz
+	CreatedAt_2 pgtype.Timestamptz
+}
+
+type CountFailedLoginsByDayRow struct {
+	Day   pgtype.Date
+	Total int64
+}
+
+func (q *Queries) CountFailedLoginsByDay(ctx context.Context, arg CountFailedLoginsByDayParams) ([]CountFailedLoginsByDayRow, error) {
+	rows, err := q.db.Query(ctx, countFailedLoginsByDay, arg.CreatedAt, arg.CreatedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountFailedLoginsByDayRow
+	for rows.Next() {
+		var i CountFailedLoginsByDayRow
+		if err := rows.Scan(&i.Day, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const countLoginsByDay = `-- name: CountLoginsByDay :many
+SELECT date_trunc('day', created_at)::date AS day, count(*) AS total
+FROM audit_logs
+WHERE org_id = $1 AND action = 'user.login' AND created_at >= $2 AND created_at <= $3
+GROUP BY day
+ORDER BY day DESC
+`
+
+type CountLoginsByDayParams struct {
+	OrgID       pgtype.UUID
+	CreatedAt   pgtype.Timestamptz
+	CreatedAt_2 pgtype.Timestamptz
+}
+
+type CountLoginsByDayRow struct {
+	Day   pgtype.Date
+	Total int64
+}
+
+func (q *Queries) CountLoginsByDay(ctx context.Context, arg CountLoginsByDayParams) ([]CountLoginsByDayRow, error) {
+	rows, err := q.db.Query(ctx, countLoginsByDay, arg.OrgID, arg.CreatedAt, arg.CreatedAt_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []CountLoginsByDayRow
+	for rows.Next() {
+		var i CountLoginsByDayRow
+		if err := rows.Scan(&i.Day, &i.Total); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const createAuditLog = `-- name: CreateAuditLog :exec
 INSERT INTO audit_logs (org_id, actor_id, action, target_type, target_id, ip_address, user_agent, metadata)
 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
@@ -105,6 +182,56 @@ func (q *Queries) ListAuditLogsByAction(ctx context.Context, arg ListAuditLogsBy
 		arg.OrgID,
 		arg.Action,
 		arg.CreatedAt,
+		arg.Limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []AuditLog
+	for rows.Next() {
+		var i AuditLog
+		if err := rows.Scan(
+			&i.ID,
+			&i.OrgID,
+			&i.ActorID,
+			&i.Action,
+			&i.TargetType,
+			&i.TargetID,
+			&i.IpAddress,
+			&i.UserAgent,
+			&i.Metadata,
+			&i.CreatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listAuditLogsByDateRange = `-- name: ListAuditLogsByDateRange :many
+SELECT id, org_id, actor_id, action, target_type, target_id, ip_address, user_agent, metadata, created_at FROM audit_logs
+WHERE org_id = $1 AND created_at >= $2 AND created_at <= $3
+ORDER BY created_at DESC
+LIMIT $4
+`
+
+type ListAuditLogsByDateRangeParams struct {
+	OrgID       pgtype.UUID
+	CreatedAt   pgtype.Timestamptz
+	CreatedAt_2 pgtype.Timestamptz
+	Limit       int32
+}
+
+func (q *Queries) ListAuditLogsByDateRange(ctx context.Context, arg ListAuditLogsByDateRangeParams) ([]AuditLog, error) {
+	rows, err := q.db.Query(ctx, listAuditLogsByDateRange,
+		arg.OrgID,
+		arg.CreatedAt,
+		arg.CreatedAt_2,
 		arg.Limit,
 	)
 	if err != nil {

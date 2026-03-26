@@ -29,3 +29,12 @@ const (
 
 	ActionSessionRevoked = "session.revoked"
 )
+
+// Target type constants for audit log entries.
+const (
+	TargetTypeUser    = "user"
+	TargetTypeOrg     = "org"
+	TargetTypeTeam    = "team"
+	TargetTypeSession = "session"
+	TargetTypeInvite  = "invite"
+)

@@ -101,7 +101,7 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 		OrgID:      orgID,
 		ActorID:    actorID,
 		Action:     audit.ActionOrgMemberRoleChanged,
-		TargetType: "user",
+		TargetType: audit.TargetTypeUser,
 		TargetID:   targetUserID,
 		Request:    r,
 		Metadata:   fmt.Appendf(nil, `{"role":"%s"}`, body.Role),
@@ -162,7 +162,7 @@ func (h *Handler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		OrgID:      orgID,
 		ActorID:    actorID,
 		Action:     audit.ActionOrgMemberRemoved,
-		TargetType: "user",
+		TargetType: audit.TargetTypeUser,
 		TargetID:   targetUserID,
 		Request:    r,
 	})
@@ -239,7 +239,7 @@ func (h *Handler) TransferOwnership(w http.ResponseWriter, r *http.Request) {
 		OrgID:      orgID,
 		ActorID:    actorID,
 		Action:     audit.ActionOrgOwnerTransferred,
-		TargetType: "user",
+		TargetType: audit.TargetTypeUser,
 		TargetID:   newOwnerID,
 		Request:    r,
 	})

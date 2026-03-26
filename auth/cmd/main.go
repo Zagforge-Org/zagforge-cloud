@@ -15,12 +15,14 @@ import (
 
 	"github.com/LegationPro/zagforge/auth/internal/config"
 	"github.com/LegationPro/zagforge/auth/internal/db"
+	audithandler "github.com/LegationPro/zagforge/auth/internal/handler/audit"
 	"github.com/LegationPro/zagforge/auth/internal/handler/health"
 	invitehandler "github.com/LegationPro/zagforge/auth/internal/handler/invite"
 	mfahandler "github.com/LegationPro/zagforge/auth/internal/handler/mfa"
 	oauthhandler "github.com/LegationPro/zagforge/auth/internal/handler/oauth"
 	orghandler "github.com/LegationPro/zagforge/auth/internal/handler/org"
 	sessionhandler "github.com/LegationPro/zagforge/auth/internal/handler/session"
+	teamhandler "github.com/LegationPro/zagforge/auth/internal/handler/team"
 	userhandler "github.com/LegationPro/zagforge/auth/internal/handler/user"
 	authmw "github.com/LegationPro/zagforge/auth/internal/middleware/auth"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
@@ -110,6 +112,8 @@ func run() error {
 	orgH := orghandler.NewHandler(database, auditSvc, log)
 	inviteH := invitehandler.NewHandler(database, auditSvc, log)
 	mfaH := mfahandler.NewHandler(database, tokenSvc, sessionSvc, encSvc, auditSvc, log)
+	teamH := teamhandler.NewHandler(database, auditSvc, log)
+	auditH := audithandler.NewHandler(database, log)
 
 	// Parse public key for auth middleware.
 	pubKey := tokenSvc.PublicKey()
@@ -199,6 +203,22 @@ func run() error {
 		{Method: router.GET, Path: "/auth/orgs/{orgID}/invites", Handler: inviteH.ListOrgInvites},
 		{Method: router.DELETE, Path: "/auth/orgs/{orgID}/invites/{inviteID}", Handler: inviteH.Revoke},
 		{Method: router.POST, Path: "/auth/invites/accept", Handler: inviteH.Accept},
+
+		// Teams.
+		{Method: router.POST, Path: "/auth/orgs/{orgID}/teams", Handler: teamH.Create},
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/teams", Handler: teamH.List},
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/teams/{teamID}", Handler: teamH.Get},
+		{Method: router.PUT, Path: "/auth/orgs/{orgID}/teams/{teamID}", Handler: teamH.Update},
+		{Method: router.DELETE, Path: "/auth/orgs/{orgID}/teams/{teamID}", Handler: teamH.Delete},
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/teams/{teamID}/members", Handler: teamH.ListMembers},
+		{Method: router.POST, Path: "/auth/orgs/{orgID}/teams/{teamID}/members", Handler: teamH.AddMember},
+		{Method: router.PUT, Path: "/auth/orgs/{orgID}/teams/{teamID}/members/{userID}", Handler: teamH.UpdateMemberRole},
+		{Method: router.DELETE, Path: "/auth/orgs/{orgID}/teams/{teamID}/members/{userID}", Handler: teamH.RemoveMember},
+
+		// Audit logs + metrics.
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/audit-logs", Handler: auditH.List},
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/metrics/logins", Handler: auditH.LoginMetrics},
+		{Method: router.GET, Path: "/auth/orgs/{orgID}/metrics/failed-logins", Handler: auditH.FailedLoginMetrics},
 	}); err != nil {
 		return fmt.Errorf("register authenticated routes: %w", err)
 	}

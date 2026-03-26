@@ -13,3 +13,23 @@ SELECT * FROM audit_logs
 WHERE org_id = $1 AND action = $2 AND created_at < $3
 ORDER BY created_at DESC
 LIMIT $4;
+
+-- name: ListAuditLogsByDateRange :many
+SELECT * FROM audit_logs
+WHERE org_id = $1 AND created_at >= $2 AND created_at <= $3
+ORDER BY created_at DESC
+LIMIT $4;
+
+-- name: CountLoginsByDay :many
+SELECT date_trunc('day', created_at)::date AS day, count(*) AS total
+FROM audit_logs
+WHERE org_id = $1 AND action = 'user.login' AND created_at >= $2 AND created_at <= $3
+GROUP BY day
+ORDER BY day DESC;
+
+-- name: CountFailedLoginsByDay :many
+SELECT date_trunc('day', created_at)::date AS day, count(*) AS total
+FROM failed_login_attempts
+WHERE created_at >= $1 AND created_at <= $2
+GROUP BY day
+ORDER BY day DESC;
