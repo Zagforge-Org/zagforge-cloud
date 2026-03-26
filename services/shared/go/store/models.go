@@ -31,6 +31,16 @@ type AuditLog struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type CliApiKey struct {
+	ID        pgtype.UUID
+	UserID    pgtype.UUID
+	OrgID     pgtype.UUID
+	KeyHash   string
+	KeyHint   string
+	Label     string
+	CreatedAt pgtype.Timestamptz
+}
+
 type ContextToken struct {
 	ID               pgtype.UUID
 	RepoID           pgtype.UUID

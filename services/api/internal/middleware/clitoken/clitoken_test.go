@@ -5,6 +5,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"go.uber.org/zap"
+
 	"github.com/LegationPro/zagforge/api/internal/middleware/clitoken"
 )
 
@@ -16,8 +18,8 @@ func handler() http.Handler {
 	})
 }
 
-func TestAuth_ValidKey(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+func TestAuth_ValidGlobalKey(t *testing.T) {
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("Authorization", "Bearer "+testKey)
 	w := httptest.NewRecorder()
@@ -30,7 +32,7 @@ func TestAuth_ValidKey(t *testing.T) {
 }
 
 func TestAuth_MissingHeader(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	w := httptest.NewRecorder()
 
@@ -42,7 +44,7 @@ func TestAuth_MissingHeader(t *testing.T) {
 }
 
 func TestAuth_EmptyBearer(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("Authorization", "Bearer ")
 	w := httptest.NewRecorder()
@@ -55,7 +57,7 @@ func TestAuth_EmptyBearer(t *testing.T) {
 }
 
 func TestAuth_WrongKey(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("Authorization", "Bearer wrong-key")
 	w := httptest.NewRecorder()
@@ -68,7 +70,7 @@ func TestAuth_WrongKey(t *testing.T) {
 }
 
 func TestAuth_NoBearerPrefix(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	req.Header.Set("Authorization", testKey)
 	w := httptest.NewRecorder()
@@ -81,7 +83,7 @@ func TestAuth_NoBearerPrefix(t *testing.T) {
 }
 
 func TestAuth_DoesNotCallNextOnFailure(t *testing.T) {
-	mw := clitoken.Auth(testKey)
+	mw := clitoken.Auth(nil, testKey, zap.NewNop())
 	called := false
 	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		called = true

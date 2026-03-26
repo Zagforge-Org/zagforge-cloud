@@ -9,6 +9,7 @@ import (
 
 	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
 	handlerpkg "github.com/LegationPro/zagforge/api/internal/handler"
+	"github.com/LegationPro/zagforge/api/internal/middleware/clitoken"
 	"github.com/LegationPro/zagforge/api/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 	"github.com/LegationPro/zagforge/shared/go/storage"
@@ -19,6 +20,7 @@ import (
 var (
 	errSnapshotVersion  = errors.New("metadata_snapshot.snapshot_version must be 2")
 	errOrgNotFound      = errors.New("organization not found")
+	errOrgMismatch      = errors.New("CLI key is not authorized for this organization")
 	errRepoNotConnected = errors.New("repository not connected; install the Zagforge GitHub App first")
 )
 
@@ -85,6 +87,15 @@ func (h *Handler) Upload(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusNotFound, errOrgNotFound)
 		return
+	}
+
+	// If a per-org CLI key was used, verify it matches the target org.
+	if clitoken.HasOrgScope(ctx) {
+		keyOrgID := clitoken.OrgIDFromCLIKey(ctx)
+		if keyOrgID != org.ID {
+			httputil.ErrResponse(w, http.StatusForbidden, errOrgMismatch)
+			return
+		}
 	}
 
 	repo, err := h.db.Queries.GetRepoByFullNameAndOrg(ctx, store.GetRepoByFullNameAndOrgParams{

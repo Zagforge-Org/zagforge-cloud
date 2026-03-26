@@ -12,7 +12,7 @@ func registerUpload(r *router.Router, d *Deps) error {
 	g := r.Group()
 	g.Use(bodylimit.Limit(bodyLimit10MB))
 	g.Use(contenttype.RequireJSON())
-	g.Use(clitoken.Auth(d.CLIAPIKey))
+	g.Use(clitoken.Auth(d.Queries, d.CLIAPIKey, d.Log))
 	g.Use(ratelimit.RateLimit(d.RDB, ratelimit.RateLimitConfig{
 		MaxRequests: rateLimitUpload,
 		Window:      rateLimitWindow,

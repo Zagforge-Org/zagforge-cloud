@@ -12,6 +12,7 @@ import (
 	aikeyshandler "github.com/LegationPro/zagforge/api/internal/handler/aikeys"
 	apihandler "github.com/LegationPro/zagforge/api/internal/handler/api"
 	"github.com/LegationPro/zagforge/api/internal/handler/callback"
+	clikeyshandler "github.com/LegationPro/zagforge/api/internal/handler/clikeys"
 	contexttokenshandler "github.com/LegationPro/zagforge/api/internal/handler/contexttokens"
 	contexturlhandler "github.com/LegationPro/zagforge/api/internal/handler/contexturl"
 	"github.com/LegationPro/zagforge/api/internal/handler/githubauth"
@@ -25,6 +26,7 @@ import (
 	"github.com/LegationPro/zagforge/shared/go/middleware/zaplogger"
 	"github.com/LegationPro/zagforge/shared/go/middleware/zaprecoverer"
 	"github.com/LegationPro/zagforge/shared/go/router"
+	"github.com/LegationPro/zagforge/shared/go/store"
 )
 
 // Deps holds everything the route layer needs to register handlers and middleware.
@@ -39,10 +41,12 @@ type Deps struct {
 	ContextURL *contexturlhandler.Handler
 	CtxTokens  *contexttokenshandler.Handler
 	AIKeys     *aikeyshandler.Handler
+	CLIKeys    *clikeyshandler.Handler
 	Query      *queryhandler.Handler
 	Account    *accounthandler.Handler
 	Org        *orghandler.Handler
 
+	Queries        *store.Queries
 	RDB            *redis.Client
 	JWTPubKey      ed25519.PublicKey
 	JWTIssuer      string

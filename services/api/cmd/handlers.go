@@ -8,6 +8,7 @@ import (
 	aikeyshandler "github.com/LegationPro/zagforge/api/internal/handler/aikeys"
 	apihandler "github.com/LegationPro/zagforge/api/internal/handler/api"
 	"github.com/LegationPro/zagforge/api/internal/handler/callback"
+	clikeyshandler "github.com/LegationPro/zagforge/api/internal/handler/clikeys"
 	contexttokenshandler "github.com/LegationPro/zagforge/api/internal/handler/contexttokens"
 	contexturlhandler "github.com/LegationPro/zagforge/api/internal/handler/contexturl"
 	"github.com/LegationPro/zagforge/api/internal/handler/githubauth"
@@ -35,10 +36,12 @@ func newRouteDeps(d *deps, c *config.Config, log *zap.Logger) *routes.Deps {
 		ContextURL: contexturlhandler.NewHandler(d.database, d.ctxCache, d.ch, d.gcsClient, log),
 		CtxTokens:  contexttokenshandler.NewHandler(d.database, log),
 		AIKeys:     aikeyshandler.NewHandler(d.database, d.encSvc, log),
+		CLIKeys:    clikeyshandler.NewHandler(d.database, log),
 		Query:      queryhandler.NewHandler(d.database, d.ctxCache, d.ch, d.gcsClient, d.encSvc, log),
 		Account:    accounthandler.NewHandler(d.database, log),
 		Org:        orghandler.NewHandler(d.database, log),
 
+		Queries:        d.database.Queries,
 		RDB:            d.rdb,
 		JWTPubKey:      d.jwtPubKey,
 		JWTIssuer:      c.App.JWTIssuer,
