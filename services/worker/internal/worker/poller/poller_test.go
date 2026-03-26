@@ -62,7 +62,7 @@ func TestPoller_Run_shutsDownCleanly(t *testing.T) {
 	claimer := &mockClaimer{claimErr: pgx.ErrNoRows}
 	r := newTestRunner()
 	exec := newTestExecutor()
-	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5)
+	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5, 5*time.Minute)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -88,7 +88,7 @@ func TestPoller_Run_pollsAtInterval(t *testing.T) {
 	claimer := &mockClaimer{claimErr: pgx.ErrNoRows}
 	r := newTestRunner()
 	exec := newTestExecutor()
-	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5)
+	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5, 5*time.Minute)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -118,7 +118,7 @@ func TestPoller_Run_repoNotFound_marksJobFailed(t *testing.T) {
 
 	r := newTestRunner()
 	exec := newTestExecutor()
-	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5)
+	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 5, 5*time.Minute)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -173,7 +173,7 @@ func TestPoller_claimsBatchUpToMaxConcurrency(t *testing.T) {
 	claimer := &countingClaimer{total: 10}
 	r := newTestRunner()
 	exec := newTestExecutor()
-	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 3)
+	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 3, 5*time.Minute)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -195,7 +195,7 @@ func TestPoller_respectsMaxConcurrency(t *testing.T) {
 	claimer := &countingClaimer{total: 100}
 	r := newTestRunner()
 	exec := newTestExecutor()
-	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 2)
+	p := poller.NewPoller(claimer, r, exec, zap.NewNop(), 50*time.Millisecond, 2, 5*time.Minute)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)

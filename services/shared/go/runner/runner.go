@@ -187,7 +187,7 @@ func (r *Runner) cloneAndRun(ctx context.Context, cloneURL, branch, commitSHA, t
 		return nil, fmt.Errorf("zigzag run: %w: %s", err, out)
 	}
 
-	result, err := collectResult(r.cfg.ReportsDir)
+	result, err := collectResult(ctx, r.cfg.ReportsDir)
 	if err != nil {
 		return nil, fmt.Errorf("collect result: %w", err)
 	}
@@ -204,13 +204,13 @@ func (r *Runner) cloneAndRun(ctx context.Context, cloneURL, branch, commitSHA, t
 
 // collectResult reads report.json for the zigzag version and sums the total
 // size of all files in the reports directory. Both operations run concurrently.
-func collectResult(reportsDir string) (*Result, error) {
+func collectResult(ctx context.Context, reportsDir string) (*Result, error) {
 	var (
 		version   string
 		totalSize atomic.Int64
 	)
 
-	g, _ := errgroup.WithContext(context.Background())
+	g, _ := errgroup.WithContext(ctx)
 
 	// Parse zigzag version from report.json.
 	g.Go(func() error {

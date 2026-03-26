@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/sony/gobreaker/v2"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/shared/go/jobtoken"
@@ -52,6 +53,7 @@ type Client struct {
 	signer  *jobtoken.Signer
 	http    *http.Client
 	log     *zap.Logger
+	cb      *gobreaker.CircuitBreaker[any]
 }
 
 // NewClient creates an API callback client.
@@ -62,6 +64,12 @@ func NewClient(baseURL string, signer *jobtoken.Signer, log *zap.Logger) *Client
 		http:    &http.Client{},
 		log:     log,
 	}
+}
+
+// WithCircuitBreaker attaches a circuit breaker to the API client.
+func (c *Client) WithCircuitBreaker(cb *gobreaker.CircuitBreaker[any]) *Client {
+	c.cb = cb
+	return c
 }
 
 func (c *Client) closeBody(body io.ReadCloser) {
@@ -90,23 +98,33 @@ func (c *Client) Start(ctx context.Context, jobID string) (StartResponse, error)
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.http.Do(req)
+	do := func() (StartResponse, error) {
+		resp, err := c.http.Do(req)
+		if err != nil {
+			return StartResponse{}, fmt.Errorf("start request: %w", err)
+		}
+		defer c.closeBody(resp.Body)
+
+		if resp.StatusCode != http.StatusOK {
+			respBody, _ := io.ReadAll(resp.Body)
+			return StartResponse{}, fmt.Errorf("%w: status %d: %s", ErrStartFailed, resp.StatusCode, respBody)
+		}
+
+		var result StartResponse
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return StartResponse{}, fmt.Errorf("decode start response: %w", err)
+		}
+		return result, nil
+	}
+
+	if c.cb == nil {
+		return do()
+	}
+	result, err := c.cb.Execute(func() (any, error) { return do() })
 	if err != nil {
-		return StartResponse{}, fmt.Errorf("start request: %w", err)
+		return StartResponse{}, err
 	}
-	defer c.closeBody(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return StartResponse{}, fmt.Errorf("%w: status %d: %s", ErrStartFailed, resp.StatusCode, respBody)
-	}
-
-	var result StartResponse
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return StartResponse{}, fmt.Errorf("decode start response: %w", err)
-	}
-
-	return result, nil
+	return result.(StartResponse), nil
 }
 
 // Complete calls POST /internal/jobs/complete to report job result.
@@ -135,16 +153,23 @@ func (c *Client) Complete(ctx context.Context, req CompleteRequest) error {
 	httpReq.Header.Set("Authorization", "Bearer "+token)
 	httpReq.Header.Set("Content-Type", "application/json")
 
-	resp, err := c.http.Do(httpReq)
-	if err != nil {
-		return fmt.Errorf("complete request: %w", err)
-	}
-	defer c.closeBody(resp.Body)
+	do := func() error {
+		resp, err := c.http.Do(httpReq)
+		if err != nil {
+			return fmt.Errorf("complete request: %w", err)
+		}
+		defer c.closeBody(resp.Body)
 
-	if resp.StatusCode != http.StatusOK {
-		respBody, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("%w: status %d: %s", ErrCompleteFailed, resp.StatusCode, respBody)
+		if resp.StatusCode != http.StatusOK {
+			respBody, _ := io.ReadAll(resp.Body)
+			return fmt.Errorf("%w: status %d: %s", ErrCompleteFailed, resp.StatusCode, respBody)
+		}
+		return nil
 	}
 
-	return nil
+	if c.cb == nil {
+		return do()
+	}
+	_, err = c.cb.Execute(func() (any, error) { return nil, do() })
+	return err
 }

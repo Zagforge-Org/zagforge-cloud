@@ -7,6 +7,7 @@ import (
 	"io"
 
 	"cloud.google.com/go/storage"
+	"github.com/sony/gobreaker/v2"
 	"go.uber.org/zap"
 	"google.golang.org/api/option"
 )
@@ -27,6 +28,13 @@ type Client struct {
 	bucket *storage.BucketHandle
 	log    *zap.Logger
 	cfg    Config
+	cb     *gobreaker.CircuitBreaker[any]
+}
+
+// WithCircuitBreaker attaches a circuit breaker to the GCS client.
+func (c *Client) WithCircuitBreaker(cb *gobreaker.CircuitBreaker[any]) *Client {
+	c.cb = cb
+	return c
 }
 
 // NewClient creates a GCS storage client.
@@ -59,44 +67,61 @@ func NewClient(ctx context.Context, cfg Config, log *zap.Logger) (*Client, error
 
 // Upload writes data to the given object path in the bucket.
 func (c *Client) Upload(ctx context.Context, path string, data []byte) error {
-	w := c.bucket.Object(path).NewWriter(ctx)
-	w.ContentType = "application/json"
+	do := func() error {
+		w := c.bucket.Object(path).NewWriter(ctx)
+		w.ContentType = "application/json"
 
-	if _, err := w.Write(data); err != nil {
-		if closeErr := w.Close(); closeErr != nil {
-			c.log.Warn("failed to close gcs writer after write error", zap.String("path", path), zap.Error(closeErr))
+		if _, err := w.Write(data); err != nil {
+			if closeErr := w.Close(); closeErr != nil {
+				c.log.Warn("failed to close gcs writer after write error", zap.String("path", path), zap.Error(closeErr))
+			}
+			return fmt.Errorf("write object %q: %w", path, err)
 		}
-		return fmt.Errorf("write object %q: %w", path, err)
+
+		if err := w.Close(); err != nil {
+			return fmt.Errorf("close writer %q: %w", path, err)
+		}
+		return nil
 	}
 
-	if err := w.Close(); err != nil {
-		return fmt.Errorf("close writer %q: %w", path, err)
+	if c.cb == nil {
+		return do()
 	}
-
-	return nil
+	_, err := c.cb.Execute(func() (any, error) { return nil, do() })
+	return err
 }
 
 // Download reads the object at the given path from the bucket.
 func (c *Client) Download(ctx context.Context, path string) ([]byte, error) {
-	r, err := c.bucket.Object(path).NewReader(ctx)
-	if err != nil {
-		if errors.Is(err, storage.ErrObjectNotExist) {
-			return nil, ErrObjectNotFound
+	do := func() ([]byte, error) {
+		r, err := c.bucket.Object(path).NewReader(ctx)
+		if err != nil {
+			if errors.Is(err, storage.ErrObjectNotExist) {
+				return nil, ErrObjectNotFound
+			}
+			return nil, fmt.Errorf("open object %q: %w", path, err)
 		}
-		return nil, fmt.Errorf("open object %q: %w", path, err)
-	}
-	defer func() {
-		if err := r.Close(); err != nil {
-			c.log.Warn("failed to close gcs reader", zap.String("path", path), zap.Error(err))
+		defer func() {
+			if err := r.Close(); err != nil {
+				c.log.Warn("failed to close gcs reader", zap.String("path", path), zap.Error(err))
+			}
+		}()
+
+		data, err := io.ReadAll(r)
+		if err != nil {
+			return nil, fmt.Errorf("read object %q: %w", path, err)
 		}
-	}()
-
-	data, err := io.ReadAll(r)
-	if err != nil {
-		return nil, fmt.Errorf("read object %q: %w", path, err)
+		return data, nil
 	}
 
-	return data, nil
+	if c.cb == nil {
+		return do()
+	}
+	result, err := c.cb.Execute(func() (any, error) { return do() })
+	if err != nil {
+		return nil, err
+	}
+	return result.([]byte), nil
 }
 
 // SnapshotPath builds the GCS object path for a snapshot.

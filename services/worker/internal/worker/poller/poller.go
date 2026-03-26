@@ -29,9 +29,10 @@ type Poller struct {
 	log            *zap.Logger
 	interval       time.Duration
 	maxConcurrency int
+	jobTimeout     time.Duration
 }
 
-func NewPoller(claimer JobClaimer, runner *runner.Runner, executor *executor.Executor, log *zap.Logger, interval time.Duration, maxConcurrency int) *Poller {
+func NewPoller(claimer JobClaimer, runner *runner.Runner, executor *executor.Executor, log *zap.Logger, interval time.Duration, maxConcurrency int, jobTimeout time.Duration) *Poller {
 	return &Poller{
 		claimer:        claimer,
 		runner:         runner,
@@ -39,6 +40,7 @@ func NewPoller(claimer JobClaimer, runner *runner.Runner, executor *executor.Exe
 		log:            log,
 		interval:       interval,
 		maxConcurrency: maxConcurrency,
+		jobTimeout:     jobTimeout,
 	}
 }
 
@@ -120,7 +122,13 @@ func (p *Poller) claimOne(ctx context.Context) error {
 	)
 
 	p.runner.GoWait(func() {
-		p.executor.Execute(context.Background(), jobID, orgID, repoIDStr)
+		jobCtx := context.Background()
+		if p.jobTimeout > 0 {
+			var cancel context.CancelFunc
+			jobCtx, cancel = context.WithTimeout(jobCtx, p.jobTimeout)
+			defer cancel()
+		}
+		p.executor.Execute(jobCtx, jobID, orgID, repoIDStr)
 	})
 
 	return nil

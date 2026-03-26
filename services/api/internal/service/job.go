@@ -42,7 +42,7 @@ func (s *JobService) HandlePush(ctx context.Context, event github.WebhookEvent, 
 	}
 
 	defer func() {
-		if err := tx.Rollback(context.Background()); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+		if err := tx.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
 			s.log.Warn("rollback error", zap.Error(err))
 		}
 	}()

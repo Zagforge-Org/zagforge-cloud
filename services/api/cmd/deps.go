@@ -17,6 +17,7 @@ import (
 	"github.com/LegationPro/zagforge/api/internal/db"
 	"github.com/LegationPro/zagforge/api/internal/engine"
 	"github.com/LegationPro/zagforge/api/internal/service/encryption"
+	"github.com/LegationPro/zagforge/shared/go/circuitbreaker"
 	"github.com/LegationPro/zagforge/shared/go/dbpool"
 	"github.com/LegationPro/zagforge/shared/go/jobtoken"
 	githubprovider "github.com/LegationPro/zagforge/shared/go/provider/github"
@@ -67,6 +68,7 @@ func initDeps(ctx context.Context, c *config.Config, log *zap.Logger) (*deps, fu
 		pool.Close()
 		return nil, nil, fmt.Errorf("create client handler: %w", err)
 	}
+	ch.WithCircuitBreaker(circuitbreaker.New("github-api", log))
 
 	// JWT public key for auth middleware.
 	pubKeyPEM, err := base64.StdEncoding.DecodeString(c.App.JWTPublicKeyBase64)
@@ -108,6 +110,7 @@ func initDeps(ctx context.Context, c *config.Config, log *zap.Logger) (*deps, fu
 			return nil, nil, fmt.Errorf("create cloud tasks enqueuer: %w", err)
 		}
 		ctCloser = ct.Close
+		ct.WithCircuitBreaker(circuitbreaker.New("cloud-tasks", log))
 		enqueuer = ct
 		log.Info("cloud tasks enqueuer enabled",
 			zap.String("queue", c.CloudTasks.Queue),
@@ -127,6 +130,7 @@ func initDeps(ctx context.Context, c *config.Config, log *zap.Logger) (*deps, fu
 		pool.Close()
 		return nil, nil, fmt.Errorf("create gcs client: %w", err)
 	}
+	gcsClient.WithCircuitBreaker(circuitbreaker.New("gcs", log))
 
 	// Encryption service for AI provider keys.
 	encKeyBytes, err := base64.StdEncoding.DecodeString(c.App.EncryptionKeyBase64)

@@ -8,6 +8,7 @@ import (
 
 	cloudtasks "cloud.google.com/go/cloudtasks/apiv2"
 	taskspb "cloud.google.com/go/cloudtasks/apiv2/cloudtaskspb"
+	"github.com/sony/gobreaker/v2"
 	"google.golang.org/protobuf/types/known/durationpb"
 )
 
@@ -29,6 +30,13 @@ type CloudTasksConfig struct {
 type CloudTasksEnqueuer struct {
 	client *cloudtasks.Client
 	cfg    CloudTasksConfig
+	cb     *gobreaker.CircuitBreaker[any]
+}
+
+// WithCircuitBreaker attaches a circuit breaker to the Cloud Tasks enqueuer.
+func (e *CloudTasksEnqueuer) WithCircuitBreaker(cb *gobreaker.CircuitBreaker[any]) *CloudTasksEnqueuer {
+	e.cb = cb
+	return e
 }
 
 // NewCloudTasksEnqueuer creates a Cloud Tasks enqueuer.
@@ -77,10 +85,18 @@ func (e *CloudTasksEnqueuer) Enqueue(ctx context.Context, jobID string, jobToken
 		},
 	}
 
-	if _, err := e.client.CreateTask(ctx, req); err != nil {
-		return fmt.Errorf("create cloud task: %w", err)
+	create := func() error {
+		if _, err := e.client.CreateTask(ctx, req); err != nil {
+			return fmt.Errorf("create cloud task: %w", err)
+		}
+		return nil
 	}
-	return nil
+
+	if e.cb == nil {
+		return create()
+	}
+	_, err = e.cb.Execute(func() (any, error) { return nil, create() })
+	return err
 }
 
 // Close closes the underlying Cloud Tasks client.

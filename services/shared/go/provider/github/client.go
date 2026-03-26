@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/sony/gobreaker/v2"
 	"go.uber.org/zap"
 )
 
@@ -24,6 +25,14 @@ var GithubApiVersion = "2026-03-10"
 type ClientHandler struct {
 	client *APIClient
 	log    *zap.Logger
+	cb     *gobreaker.CircuitBreaker[any]
+}
+
+// WithCircuitBreaker attaches a circuit breaker to the client handler.
+// When set, all GitHub API calls are routed through the breaker.
+func (h *ClientHandler) WithCircuitBreaker(cb *gobreaker.CircuitBreaker[any]) *ClientHandler {
+	h.cb = cb
+	return h
 }
 
 // Compile-time guard: ClientHandler must satisfy provider.Worker.
@@ -96,43 +105,54 @@ func (h *ClientHandler) generateAppJWT() (string, error) {
 
 // GenerateCloneToken exchanges a GitHub App JWT for a short-lived installation access token.
 func (h *ClientHandler) GenerateCloneToken(ctx context.Context, installationID int64) (string, error) {
-	appJWT, err := h.generateAppJWT()
+	do := func() (string, error) {
+		appJWT, err := h.generateAppJWT()
+		if err != nil {
+			return "", err
+		}
+
+		url := fmt.Sprintf("%s/app/installations/%d/access_tokens", h.client.apiBaseURL, installationID)
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
+		if err != nil {
+			return "", fmt.Errorf("failed to create request: %w", err)
+		}
+
+		req.Header.Set("Authorization", "Bearer "+appJWT)
+		req.Header.Set("Accept", "application/vnd.github+json")
+		req.Header.Set("X-GitHub-Api-Version", GithubApiVersion)
+
+		resp, err := h.client.httpClient.Do(req)
+		if err != nil {
+			return "", fmt.Errorf("failed to call GitHub API: %w", err)
+		}
+		defer h.closeBody(resp.Body)
+
+		if resp.StatusCode != http.StatusCreated {
+			body, _ := io.ReadAll(resp.Body)
+			return "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, body)
+		}
+
+		var result struct {
+			Token string `json:"token"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+			return "", fmt.Errorf("failed to decode response: %w", err)
+		}
+		if result.Token == "" {
+			return "", errors.New("GitHub API returned empty token")
+		}
+
+		return result.Token, nil
+	}
+
+	if h.cb == nil {
+		return do()
+	}
+	result, err := h.cb.Execute(func() (any, error) { return do() })
 	if err != nil {
 		return "", err
 	}
-
-	url := fmt.Sprintf("%s/app/installations/%d/access_tokens", h.client.apiBaseURL, installationID)
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("failed to create request: %w", err)
-	}
-
-	req.Header.Set("Authorization", "Bearer "+appJWT)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("X-GitHub-Api-Version", GithubApiVersion)
-
-	resp, err := h.client.httpClient.Do(req)
-	if err != nil {
-		return "", fmt.Errorf("failed to call GitHub API: %w", err)
-	}
-	defer h.closeBody(resp.Body)
-
-	if resp.StatusCode != http.StatusCreated {
-		body, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("GitHub API returned %d: %s", resp.StatusCode, body)
-	}
-
-	var result struct {
-		Token string `json:"token"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return "", fmt.Errorf("failed to decode response: %w", err)
-	}
-	if result.Token == "" {
-		return "", errors.New("GitHub API returned empty token")
-	}
-
-	return result.Token, nil
+	return result.(string), nil
 }
 
 // CloneRepo performs a shallow clone of repoURL at the given ref into dst.

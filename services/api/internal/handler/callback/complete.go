@@ -1,7 +1,6 @@
 package callback
 
 import (
-	"context"
 	"errors"
 	"io"
 	"net/http"
@@ -47,7 +46,7 @@ func (h *Handler) Complete(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusInternalServerError, ErrInternal)
 		return
 	}
-	defer tx.Rollback(context.Background()) //nolint:errcheck
+	defer tx.Rollback(r.Context()) //nolint:errcheck
 
 	qtx := store.New(tx)
 

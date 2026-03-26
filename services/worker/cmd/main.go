@@ -8,6 +8,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/LegationPro/zagforge/shared/go/circuitbreaker"
 	"github.com/LegationPro/zagforge/shared/go/dbpool"
 	"github.com/LegationPro/zagforge/shared/go/jobtoken"
 	"github.com/LegationPro/zagforge/shared/go/logger"
@@ -54,6 +55,7 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create client handler: %w", err)
 	}
+	ch.WithCircuitBreaker(circuitbreaker.New("github-api", log))
 
 	gcs, err := storage.NewClient(context.Background(), storage.Config{
 		Bucket:   cfg.GCS.Bucket,
@@ -62,13 +64,15 @@ func run() error {
 	if err != nil {
 		return fmt.Errorf("create gcs client: %w", err)
 	}
+	gcs.WithCircuitBreaker(circuitbreaker.New("gcs", log))
 
 	signer := jobtoken.NewSigner([]byte(cfg.HMACSigningKey), 30*time.Minute)
 	if cfg.HMACSigningKeyPrev != "" {
 		signer = signer.WithPreviousKey([]byte(cfg.HMACSigningKeyPrev))
 		log.Info("HMAC key rotation active: accepting both current and previous signing keys")
 	}
-	api := apiclient.NewClient(cfg.APIBaseURL, signer, log)
+	api := apiclient.NewClient(cfg.APIBaseURL, signer, log).
+		WithCircuitBreaker(circuitbreaker.New("api-callback", log))
 
 	r := runner.New(ch, runner.Config{
 		WorkspaceDir: cfg.WorkspaceDir,
@@ -86,7 +90,7 @@ func run() error {
 	case "http":
 		return runHTTP(ctx, cfg, queries, exec, signer, log)
 	case "poll":
-		p := poller.NewPoller(queries, r, exec, log, pollInterval, cfg.MaxConcurrency)
+		p := poller.NewPoller(queries, r, exec, log, pollInterval, cfg.MaxConcurrency, cfg.JobTimeout)
 		return p.Run(ctx)
 	default:
 		return fmt.Errorf("unknown WORKER_MODE: %q (expected \"http\" or \"poll\")", cfg.WorkerMode)
