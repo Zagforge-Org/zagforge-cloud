@@ -37,6 +37,13 @@ variable "api_url" {
   default     = ""
 }
 
+# Auth URL (used as JWT issuer and OAuth callback base)
+variable "auth_url" {
+  description = "Auth Cloud Run URL (e.g. https://zagforge-auth-xxx.run.app)"
+  type        = string
+  default     = ""
+}
+
 # CORS
 variable "cors_allowed_origins" {
   description = "Comma-separated allowed origins for CORS"
@@ -46,15 +53,9 @@ variable "cors_allowed_origins" {
 
 # Database
 variable "database_provider" {
-  description = "Database provider: neon or cloudsql"
+  description = "Database provider: neon (free tier) or cloudsql (staging/prod)"
   type        = string
   default     = "neon"
-}
-
-variable "neon_project_id" {
-  description = "Neon project ID (when database_provider = neon)"
-  type        = string
-  default     = ""
 }
 
 variable "cloud_sql_tier" {
@@ -65,7 +66,7 @@ variable "cloud_sql_tier" {
 
 # Redis
 variable "redis_provider" {
-  description = "Redis provider: upstash (dev) or memorystore (prod)"
+  description = "Redis provider: upstash (free tier) or memorystore (prod)"
   type        = string
   default     = "upstash"
 }
@@ -89,6 +90,19 @@ variable "api_max_instances" {
   default     = 2
 }
 
+# Auth scaling
+variable "auth_min_instances" {
+  description = "Minimum Auth Cloud Run instances (1 in prod — no cold starts on auth)"
+  type        = number
+  default     = 0
+}
+
+variable "auth_max_instances" {
+  description = "Maximum Auth Cloud Run instances"
+  type        = number
+  default     = 2
+}
+
 # Networking
 variable "cloud_armor_enabled" {
   description = "Enable Cloud Armor WAF (off in dev, on in prod)"
@@ -100,31 +114,6 @@ variable "domain" {
   description = "Custom domain for the API (e.g. api.zagforge.com)"
   type        = string
   default     = ""
-}
-
-# Zitadel
-variable "zitadel_domain" {
-  description = "Public domain for Zitadel (e.g. auth.zagforge.com)"
-  type        = string
-  default     = ""
-}
-
-variable "zitadel_image" {
-  description = "Zitadel container image with tag"
-  type        = string
-  default     = "ghcr.io/zitadel/zitadel:v2.71.6"
-}
-
-variable "zitadel_min_instances" {
-  description = "Minimum Zitadel Cloud Run instances (1 in prod — no cold starts on auth)"
-  type        = number
-  default     = 0
-}
-
-variable "zitadel_max_instances" {
-  description = "Maximum Zitadel Cloud Run instances"
-  type        = number
-  default     = 3
 }
 
 # Secrets are managed by Doppler — no Terraform variables needed.

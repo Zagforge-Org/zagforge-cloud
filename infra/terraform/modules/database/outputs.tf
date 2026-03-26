@@ -6,3 +6,7 @@ output "connection_name" {
 output "database_name" {
   value = var.database_provider == "cloudsql" ? google_sql_database.main[0].name : ""
 }
+
+output "auth_database_name" {
+  value = var.database_provider == "cloudsql" ? google_sql_database.auth[0].name : ""
+}

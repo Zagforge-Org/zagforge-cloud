@@ -15,11 +15,23 @@ on:
 
 env:
   PROJECT_ID: zagforge
-  REGION: us-central1
   SERVICE: zagforge-auth
-  REGISTRY: us-central1-docker.pkg.dev/zagforge/zagforge
 
 jobs:
+  setup:
+    name: Resolve Region
+    runs-on: ubuntu-latest
+    outputs:
+      region: ${{ steps.region.outputs.region }}
+      registry: ${{ steps.region.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: region
+        run: |
+          REGION=$(grep '^region' infra/terraform/envs/${{ inputs.environment }}.tfvars | sed 's/.*= *"\(.*\)"/\1/')
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "registry=${REGION}-docker.pkg.dev/${{ env.PROJECT_ID }}/zagforge" >> "$GITHUB_OUTPUT"
+
   ci:
     name: CI Checks
     runs-on: ubuntu-latest
@@ -42,7 +54,7 @@ jobs:
   deploy:
     name: Build & Deploy Auth (${{ inputs.environment }})
     runs-on: ubuntu-latest
-    needs: [ci]
+    needs: [ci, setup]
     environment: ${{ inputs.environment }}
     permissions:
       id-token: write
@@ -60,7 +72,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ needs.setup.outputs.region }}-docker.pkg.dev --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -72,8 +84,8 @@ jobs:
           file: services/auth/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/auth:${{ github.sha }}
-            ${{ env.REGISTRY }}/auth:latest
+            ${{ needs.setup.outputs.registry }}/auth:${{ github.sha }}
+            ${{ needs.setup.outputs.registry }}/auth:latest
           cache-from: type=gha,scope=auth
           cache-to: type=gha,scope=auth,mode=max
           platforms: linux/amd64
@@ -101,7 +113,7 @@ jobs:
             exit 1
           fi
           gcloud run services update ${{ env.SERVICE }} \
-            --region ${{ env.REGION }} \
+            --region ${{ needs.setup.outputs.region }} \
             --set-env-vars "$SECRETS" \
             --quiet
 
@@ -109,12 +121,12 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE }}
-          image: ${{ env.REGISTRY }}/auth:${{ github.sha }}
-          region: ${{ env.REGION }}
+          image: ${{ needs.setup.outputs.registry }}/auth:${{ github.sha }}
+          region: ${{ needs.setup.outputs.region }}
 
-      - name: Run database migrations
+      - name: Run auth database migrations
         run: |
           gcloud run jobs execute zagforge-auth-migrate \
-            --region ${{ env.REGION }} \
+            --region ${{ needs.setup.outputs.region }} \
             --wait \
             2>/dev/null || echo "No auth migrate job configured yet, skipping"

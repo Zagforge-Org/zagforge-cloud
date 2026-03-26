@@ -44,6 +44,9 @@ module "storage" {
 }
 
 # --- Database ---
+# Cloud SQL is only provisioned for staging/prod (database_provider = "cloudsql").
+# Dev uses Neon (free tier) — DATABASE_URL and AUTH_DATABASE_URL managed via Doppler.
+# Cloud SQL creates two databases: zagforge (API) and zagforge_auth (Auth).
 module "database" {
   source = "./modules/database"
 
@@ -55,6 +58,8 @@ module "database" {
 }
 
 # --- Redis ---
+# Dev uses Upstash (free tier) — REDIS_URL managed via Doppler.
+# Prod uses Memorystore.
 module "redis" {
   source = "./modules/redis"
 
@@ -74,17 +79,19 @@ module "queue" {
   name_prefix = local.name_prefix
 }
 
-# --- Zitadel (Cloud Run Service — Identity Provider) ---
-module "zitadel" {
-  source = "./modules/zitadel"
+# --- Auth (Cloud Run Service) ---
+module "auth" {
+  source = "./modules/auth"
 
-  project_id      = var.project_id
-  region          = var.region
-  name_prefix     = local.name_prefix
-  external_domain = var.zitadel_domain
-  zitadel_image   = var.zitadel_image
-  min_instances   = var.zitadel_min_instances
-  max_instances   = var.zitadel_max_instances
+  project_id              = var.project_id
+  region                  = var.region
+  name_prefix             = local.name_prefix
+  environment             = var.environment
+  min_instances           = var.auth_min_instances
+  max_instances           = var.auth_max_instances
+  jwt_issuer              = var.auth_url
+  oauth_callback_base_url = var.auth_url
+  cors_allowed_origins    = var.cors_allowed_origins
 }
 
 # --- API (Cloud Run Service) ---

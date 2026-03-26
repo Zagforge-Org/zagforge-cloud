@@ -1,5 +1,5 @@
 environment          = "staging"
-github_repo          = "LegationPro/zagforge-cloud"
+github_repo          = "LegationPro/zagforge-mvp"
 project_id           = "zagforge"
 region               = "europe-west1"
 database_provider    = "cloudsql"
@@ -12,7 +12,7 @@ github_app_id        = "3122231"
 github_app_slug      = "zagforge-zigzag-dev"
 cors_allowed_origins = ""
 
-# Zitadel
-zitadel_domain        = "auth-staging.zagforge.com"
-zitadel_min_instances = 0
-zitadel_max_instances = 2
+# Auth
+auth_url           = "https://auth-staging.zagforge.com"
+auth_min_instances = 0
+auth_max_instances = 2

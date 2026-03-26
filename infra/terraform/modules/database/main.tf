@@ -37,6 +37,12 @@ resource "google_sql_database" "main" {
   instance = google_sql_database_instance.main[0].name
 }
 
+resource "google_sql_database" "auth" {
+  count    = var.database_provider == "cloudsql" ? 1 : 0
+  name     = "${var.name_prefix}_auth"
+  instance = google_sql_database_instance.main[0].name
+}
+
 resource "google_sql_user" "main" {
   count    = var.database_provider == "cloudsql" ? 1 : 0
   name     = var.name_prefix
