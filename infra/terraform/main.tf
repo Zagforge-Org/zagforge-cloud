@@ -128,6 +128,17 @@ module "worker" {
   api_url       = var.api_url
 }
 
+# --- Migration Jobs (Cloud Run Jobs) ---
+module "migrate" {
+  source = "./modules/migrate"
+
+  project_id           = var.project_id
+  region               = var.region
+  name_prefix          = local.name_prefix
+  api_service_account  = module.api.service_account_email
+  auth_service_account = module.auth.service_account_email
+}
+
 # --- Cloud Scheduler (Watchdog) ---
 module "scheduler" {
   source = "./modules/scheduler"

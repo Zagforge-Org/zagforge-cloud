@@ -124,9 +124,25 @@ jobs:
           image: ${{ needs.setup.outputs.registry }}/api:${{ github.sha }}
           region: ${{ needs.setup.outputs.region }}
 
-      - name: Run database migrations
+      - name: Build and push migrate image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/api/Dockerfile.migrate
+          push: true
+          tags: |
+            ${{ needs.setup.outputs.registry }}/migrate:${{ github.sha }}
+            ${{ needs.setup.outputs.registry }}/migrate:latest
+          cache-from: type=gha,scope=migrate
+          cache-to: type=gha,scope=migrate,mode=max
+          platforms: linux/amd64
+
+      - name: Update and run database migrations
         run: |
-          gcloud run jobs execute zagforge-migrate \
+          gcloud run jobs update zagforge-migrate \
             --region ${{ needs.setup.outputs.region }} \
-            --wait \
-            2>/dev/null || echo "No migrate job configured yet, skipping"
+            --image ${{ needs.setup.outputs.registry }}/migrate:${{ github.sha }} \
+            --quiet \
+          && gcloud run jobs execute zagforge-migrate \
+            --region ${{ needs.setup.outputs.region }} \
+            --wait

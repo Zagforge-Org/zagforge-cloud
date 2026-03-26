@@ -124,9 +124,25 @@ jobs:
           image: ${{ needs.setup.outputs.registry }}/auth:${{ github.sha }}
           region: ${{ needs.setup.outputs.region }}
 
-      - name: Run auth database migrations
+      - name: Build and push auth-migrate image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: services/auth/Dockerfile.migrate
+          push: true
+          tags: |
+            ${{ needs.setup.outputs.registry }}/auth-migrate:${{ github.sha }}
+            ${{ needs.setup.outputs.registry }}/auth-migrate:latest
+          cache-from: type=gha,scope=auth-migrate
+          cache-to: type=gha,scope=auth-migrate,mode=max
+          platforms: linux/amd64
+
+      - name: Update and run auth database migrations
         run: |
-          gcloud run jobs execute zagforge-auth-migrate \
+          gcloud run jobs update zagforge-auth-migrate \
             --region ${{ needs.setup.outputs.region }} \
-            --wait \
-            2>/dev/null || echo "No auth migrate job configured yet, skipping"
+            --image ${{ needs.setup.outputs.registry }}/auth-migrate:${{ github.sha }} \
+            --quiet \
+          && gcloud run jobs execute zagforge-auth-migrate \
+            --region ${{ needs.setup.outputs.region }} \
+            --wait
