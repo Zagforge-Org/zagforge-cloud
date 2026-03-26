@@ -27,6 +27,7 @@ import (
 	userhandler "github.com/LegationPro/zagforge/auth/internal/handler/user"
 	webhookhandler "github.com/LegationPro/zagforge/auth/internal/handler/webhook"
 	authmw "github.com/LegationPro/zagforge/auth/internal/middleware/auth"
+	"github.com/LegationPro/zagforge/auth/internal/middleware/ratelimit"
 	"github.com/LegationPro/zagforge/auth/internal/service/audit"
 	"github.com/LegationPro/zagforge/auth/internal/service/encryption"
 	oauthsvc "github.com/LegationPro/zagforge/auth/internal/service/oauth"
@@ -141,9 +142,12 @@ func run() error {
 		return fmt.Errorf("register jwks routes: %w", err)
 	}
 
-	// OAuth — no auth, rate limited.
+	// OAuth — no auth, rate limited by IP.
 	oauthRoutes := r.Group()
-	// TODO: add rate limiting once ratelimit middleware is ported
+	oauthRoutes.Use(ratelimit.RateLimit(rdb, ratelimit.Config{
+		MaxRequests: 30,
+		Window:      1 * time.Minute,
+	}, "oauth", log))
 	if err := oauthRoutes.Create([]router.Subroute{
 		{Method: router.GET, Path: "/auth/oauth/{provider}/start", Handler: oauthH.Start},
 		{Method: router.GET, Path: "/auth/oauth/{provider}/callback", Handler: oauthH.Callback},
@@ -151,8 +155,12 @@ func run() error {
 		return fmt.Errorf("register oauth routes: %w", err)
 	}
 
-	// Token refresh — no auth (uses refresh token cookie/body).
+	// Token refresh — rate limited by IP.
 	refreshRoutes := r.Group()
+	refreshRoutes.Use(ratelimit.RateLimit(rdb, ratelimit.Config{
+		MaxRequests: 30,
+		Window:      1 * time.Minute,
+	}, "refresh", log))
 	if err := refreshRoutes.Create([]router.Subroute{
 		{Method: router.POST, Path: "/auth/token/refresh", Handler: sessionH.Refresh},
 		{Method: router.POST, Path: "/auth/logout", Handler: sessionH.Logout},
@@ -160,8 +168,12 @@ func run() error {
 		return fmt.Errorf("register refresh routes: %w", err)
 	}
 
-	// MFA challenge — no auth (uses mfa_challenge_token from OAuth callback).
+	// MFA challenge — no auth, rate limited (uses mfa_challenge_token from OAuth callback).
 	mfaPublic := r.Group()
+	mfaPublic.Use(ratelimit.RateLimit(rdb, ratelimit.Config{
+		MaxRequests: 10,
+		Window:      1 * time.Minute,
+	}, "mfa", log))
 	if err := mfaPublic.Create([]router.Subroute{
 		{Method: router.POST, Path: "/auth/mfa/totp/challenge", Handler: mfaH.Challenge},
 		{Method: router.POST, Path: "/auth/mfa/backup-codes/verify", Handler: mfaH.BackupCodeVerify},
@@ -169,9 +181,13 @@ func run() error {
 		return fmt.Errorf("register mfa challenge routes: %w", err)
 	}
 
-	// Authenticated routes.
+	// Authenticated routes — auth + rate limit.
 	authed := r.Group()
 	authed.Use(authmw.Auth(pubKey, tokenSvc.Issuer(), log))
+	authed.Use(ratelimit.RateLimit(rdb, ratelimit.Config{
+		MaxRequests: 60,
+		Window:      1 * time.Minute,
+	}, "auth", log))
 	if err := authed.Create([]router.Subroute{
 		// Sessions.
 		{Method: router.POST, Path: "/auth/logout/all", Handler: sessionH.LogoutAll},

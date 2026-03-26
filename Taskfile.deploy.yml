@@ -35,10 +35,12 @@ tasks:
             - echo "Done. Secrets synced to zagforge-{{.SERVICE}}."
 
     sync-all:
-        desc: "Sync Doppler secrets to both API and Worker. Usage: task deploy:sync-all [ENV=dev]"
+        desc: "Sync Doppler secrets to API, Auth, and Worker. Usage: task deploy:sync-all [ENV=dev]"
         cmds:
             - task: sync-secrets
               vars: { SERVICE: api }
+            - task: sync-secrets
+              vars: { SERVICE: auth }
             - task: sync-secrets
               vars: { SERVICE: worker }
 
@@ -52,10 +54,12 @@ tasks:
             - echo "Deploy triggered. Watch at https://github.com/LegationPro/zagforge-mvp/actions"
 
     ship:all:
-        desc: "Deploy both API and Worker. Usage: task deploy:ship:all [ENV=dev]"
+        desc: "Deploy API, Auth, and Worker. Usage: task deploy:ship:all [ENV=dev]"
         cmds:
             - task: ship
               vars: { SERVICE: api }
+            - task: ship
+              vars: { SERVICE: auth }
             - task: ship
               vars: { SERVICE: worker }
 
