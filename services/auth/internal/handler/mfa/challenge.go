@@ -207,7 +207,7 @@ func (h *Handler) issueTokens(w http.ResponseWriter, r *http.Request, userID pgt
 		Path:     "/auth",
 		HttpOnly: true,
 		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(h.tokenSvc.RefreshTokenTTL().Seconds()),
 	})
 

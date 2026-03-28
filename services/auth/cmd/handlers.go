@@ -32,9 +32,10 @@ func newRouteDeps(d *deps, c *config.Config, log *zap.Logger) *routes.Deps {
 		Webhook: webhookhandler.NewHandler(d.database, log),
 		Admin:   adminhandler.NewHandler(d.database, log),
 
-		RDB:       d.rdb,
-		PubKey:    d.tokenSvc.PublicKey(),
-		JWTIssuer: d.tokenSvc.Issuer(),
-		Log:       log,
+		RDB:         d.rdb,
+		PubKey:      d.tokenSvc.PublicKey(),
+		JWTIssuer:   d.tokenSvc.Issuer(),
+		CORSOrigins: c.CORS.AllowedOrigins,
+		Log:         log,
 	}
 }

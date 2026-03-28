@@ -22,6 +22,7 @@ func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	}
 
 	clearRefreshCookie(w)
+	clearAccessCookie(w)
 
 	httputil.WriteJSON(w, http.StatusOK, handler.StatusResponse{Status: "logged_out"})
 }
@@ -44,6 +45,7 @@ func (h *Handler) LogoutAll(w http.ResponseWriter, r *http.Request) {
 	_ = h.db.Queries.RevokeAllUserRefreshTokens(r.Context(), userID)
 
 	clearRefreshCookie(w)
+	clearAccessCookie(w)
 
 	h.auditSvc.Log(r.Context(), audit.LogParams{
 		ActorID: userID,

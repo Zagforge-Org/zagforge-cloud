@@ -78,6 +78,11 @@ func (s *Service) Issuer() string {
 	return s.issuer
 }
 
+// AccessTokenTTL returns the configured access token TTL.
+func (s *Service) AccessTokenTTL() time.Duration {
+	return s.accessTTL
+}
+
 // RefreshTokenTTL returns the configured refresh token TTL.
 func (s *Service) RefreshTokenTTL() time.Duration {
 	return s.refreshTTL

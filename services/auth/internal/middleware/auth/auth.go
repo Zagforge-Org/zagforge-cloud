@@ -59,9 +59,13 @@ func UserIDFromContext(ctx context.Context) (string, error) {
 }
 
 func extractToken(r *http.Request) string {
-	token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !found {
-		return ""
+	// Prefer Authorization header (client-side requests).
+	if token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); found {
+		return token
 	}
-	return token
+	// Fall back to HttpOnly cookie (server-side requests from Next.js).
+	if cookie, err := r.Cookie("access_token"); err == nil && cookie.Value != "" {
+		return cookie.Value
+	}
+	return ""
 }

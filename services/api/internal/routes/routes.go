@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 
@@ -63,6 +64,13 @@ func Register(r *router.Router, d *Deps) error {
 	r.Use(middleware.RequestID)
 	r.Use(zaplogger.Middleware(d.Log))
 	r.Use(zaprecoverer.Middleware(d.Log))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   d.CORSOrigins,
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 	r.Use(middleware.RedirectSlashes)
 	r.Use(middleware.Timeout(10 * time.Second))
 	r.Use(middleware.ThrottleBacklog(100, 50, 5*time.Second))

@@ -2,7 +2,7 @@
 -- Override GITHUB_REPO_ID and INSTALLATION_ID via psql variables if needed:
 --   psql -v github_repo_id=12345 -v installation_id=67890 -f dev.sql
 
-INSERT INTO organizations (zitadel_org_id, slug, name)
+INSERT INTO organizations (auth_org_id, slug, name)
 VALUES ('dev_org', 'legationpro', 'LegationPro')
 ON CONFLICT (slug) DO NOTHING;
 

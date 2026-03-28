@@ -245,18 +245,27 @@ func (h *Handler) issueTokensAndRedirect(w http.ResponseWriter, r *http.Request,
 		return fmt.Errorf("issue access token: %w", err)
 	}
 
-	// Set refresh token as HttpOnly cookie.
+	// Set both tokens as HttpOnly cookies.
+	secure := r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshTok.Raw,
-		Path:     "/auth",
+		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
-		SameSite: http.SameSiteStrictMode,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(h.tokenSvc.RefreshTokenTTL().Seconds()),
 	})
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    accessJWT,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   secure,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(h.tokenSvc.AccessTokenTTL().Seconds()),
+	})
 
-	redirectURL := redirectURI + "?access_token=" + accessJWT
-	http.Redirect(w, r, redirectURL, http.StatusFound)
+	http.Redirect(w, r, redirectURI, http.StatusFound)
 	return nil
 }

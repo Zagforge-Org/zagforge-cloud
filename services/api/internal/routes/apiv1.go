@@ -2,14 +2,12 @@ package routes
 
 import (
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
-	corsmw "github.com/LegationPro/zagforge/api/internal/middleware/cors"
 	"github.com/LegationPro/zagforge/api/internal/middleware/ratelimit"
 	"github.com/LegationPro/zagforge/shared/go/router"
 )
 
 func registerAPIv1(r *router.Router, d *Deps) error {
 	v1 := r.Group()
-	v1.Use(corsmw.Cors(d.CORSOrigins))
 	v1.Use(auth.Auth(d.JWTPubKey, d.JWTIssuer, d.Log))
 	v1.Use(auth.Scope(d.Log))
 	v1.Use(ratelimit.RateLimit(d.RDB, ratelimit.RateLimitConfig{

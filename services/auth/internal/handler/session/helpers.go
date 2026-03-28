@@ -60,14 +60,30 @@ func buildFullName(user authstore.User) string {
 	return strings.TrimSpace(name)
 }
 
+func isSecure(r *http.Request) bool {
+	return r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https"
+}
+
 func setRefreshCookie(w http.ResponseWriter, r *http.Request, value string, ttl time.Duration) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    value,
-		Path:     "/auth",
+		Path:     "/",
 		HttpOnly: true,
-		Secure:   r.TLS != nil || r.Header.Get("X-Forwarded-Proto") == "https",
-		SameSite: http.SameSiteStrictMode,
+		Secure:   isSecure(r),
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   int(ttl.Seconds()),
+	})
+}
+
+func setAccessCookie(w http.ResponseWriter, r *http.Request, value string, ttl time.Duration) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    value,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   isSecure(r),
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   int(ttl.Seconds()),
 	})
 }
@@ -76,10 +92,22 @@ func clearRefreshCookie(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
-		Path:     "/auth",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   true,
-		SameSite: http.SameSiteStrictMode,
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   -1,
+	})
+}
+
+func clearAccessCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 }

@@ -33,7 +33,7 @@ services:
       - "4443:4443"
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4443/storage/v1/b || exit 1"]
-      interval: 5s
+      interval: 30s
       timeout: 3s
       retries: 5
 

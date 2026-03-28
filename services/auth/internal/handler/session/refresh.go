@@ -109,9 +109,10 @@ func (h *Handler) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	setRefreshCookie(w, r, refreshTok.Raw, h.tokenSvc.RefreshTokenTTL())
+	setAccessCookie(w, r, accessJWT, h.tokenSvc.AccessTokenTTL())
 
 	httputil.OkResponse(w, tokenResponse{
 		AccessToken: accessJWT,
-		ExpiresIn:   900,
+		ExpiresIn:   int(h.tokenSvc.AccessTokenTTL().Seconds()),
 	})
 }
