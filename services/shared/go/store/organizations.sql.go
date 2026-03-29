@@ -78,9 +78,9 @@ RETURNING id, slug, name, created_at, auth_org_id
 `
 
 type UpdateOrganizationParams struct {
-	ID   pgtype.UUID
-	Name string
-	Slug string
+	ID   pgtype.UUID `json:"id"`
+	Name string      `json:"name"`
+	Slug string      `json:"slug"`
 }
 
 func (q *Queries) UpdateOrganization(ctx context.Context, arg UpdateOrganizationParams) (Organization, error) {
@@ -105,9 +105,9 @@ RETURNING id, slug, name, created_at, auth_org_id
 `
 
 type UpsertOrgParams struct {
-	AuthOrgID string
-	Slug      string
-	Name      string
+	AuthOrgID string `json:"auth_org_id"`
+	Slug      string `json:"slug"`
+	Name      string `json:"name"`
 }
 
 func (q *Queries) UpsertOrg(ctx context.Context, arg UpsertOrgParams) (Organization, error) {

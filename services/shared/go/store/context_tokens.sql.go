@@ -16,8 +16,8 @@ DELETE FROM context_tokens WHERE id = $1 AND org_id = $2
 `
 
 type DeleteContextTokenForOrgParams struct {
-	ID    pgtype.UUID
-	OrgID pgtype.UUID
+	ID    pgtype.UUID `json:"id"`
+	OrgID pgtype.UUID `json:"org_id"`
 }
 
 func (q *Queries) DeleteContextTokenForOrg(ctx context.Context, arg DeleteContextTokenForOrgParams) error {
@@ -30,8 +30,8 @@ DELETE FROM context_tokens WHERE id = $1 AND user_id = $2
 `
 
 type DeleteContextTokenForUserParams struct {
-	ID     pgtype.UUID
-	UserID pgtype.UUID
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) DeleteContextTokenForUser(ctx context.Context, arg DeleteContextTokenForUserParams) error {
@@ -56,17 +56,17 @@ WHERE token_hash = $1
 `
 
 type GetContextTokenByHashRow struct {
-	ID               pgtype.UUID
-	RepoID           pgtype.UUID
-	UserID           pgtype.UUID
-	OrgID            pgtype.UUID
-	TargetSnapshotID pgtype.UUID
-	TokenHash        string
-	Label            pgtype.Text
-	LastUsedAt       pgtype.Timestamptz
-	ExpiresAt        pgtype.Timestamptz
-	Visibility       ContextVisibility
-	CreatedAt        pgtype.Timestamptz
+	ID               pgtype.UUID        `json:"id"`
+	RepoID           pgtype.UUID        `json:"repo_id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	OrgID            pgtype.UUID        `json:"org_id"`
+	TargetSnapshotID pgtype.UUID        `json:"target_snapshot_id"`
+	TokenHash        string             `json:"token_hash"`
+	Label            pgtype.Text        `json:"label"`
+	LastUsedAt       pgtype.Timestamptz `json:"last_used_at"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	Visibility       ContextVisibility  `json:"visibility"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) GetContextTokenByHash(ctx context.Context, tokenHash string) (GetContextTokenByHashRow, error) {
@@ -97,28 +97,28 @@ token_hash, label, last_used_at, expires_at, visibility, created_at
 `
 
 type InsertContextTokenParams struct {
-	RepoID           pgtype.UUID
-	UserID           pgtype.UUID
-	OrgID            pgtype.UUID
-	TargetSnapshotID pgtype.UUID
-	TokenHash        string
-	Label            pgtype.Text
-	ExpiresAt        pgtype.Timestamptz
-	Visibility       ContextVisibility
+	RepoID           pgtype.UUID        `json:"repo_id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	OrgID            pgtype.UUID        `json:"org_id"`
+	TargetSnapshotID pgtype.UUID        `json:"target_snapshot_id"`
+	TokenHash        string             `json:"token_hash"`
+	Label            pgtype.Text        `json:"label"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	Visibility       ContextVisibility  `json:"visibility"`
 }
 
 type InsertContextTokenRow struct {
-	ID               pgtype.UUID
-	RepoID           pgtype.UUID
-	UserID           pgtype.UUID
-	OrgID            pgtype.UUID
-	TargetSnapshotID pgtype.UUID
-	TokenHash        string
-	Label            pgtype.Text
-	LastUsedAt       pgtype.Timestamptz
-	ExpiresAt        pgtype.Timestamptz
-	Visibility       ContextVisibility
-	CreatedAt        pgtype.Timestamptz
+	ID               pgtype.UUID        `json:"id"`
+	RepoID           pgtype.UUID        `json:"repo_id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	OrgID            pgtype.UUID        `json:"org_id"`
+	TargetSnapshotID pgtype.UUID        `json:"target_snapshot_id"`
+	TokenHash        string             `json:"token_hash"`
+	Label            pgtype.Text        `json:"label"`
+	LastUsedAt       pgtype.Timestamptz `json:"last_used_at"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	Visibility       ContextVisibility  `json:"visibility"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) InsertContextToken(ctx context.Context, arg InsertContextTokenParams) (InsertContextTokenRow, error) {
@@ -159,17 +159,17 @@ ORDER BY ct.created_at DESC
 `
 
 type ListContextTokensByRepoRow struct {
-	ID               pgtype.UUID
-	RepoID           pgtype.UUID
-	UserID           pgtype.UUID
-	OrgID            pgtype.UUID
-	TargetSnapshotID pgtype.UUID
-	Label            pgtype.Text
-	LastUsedAt       pgtype.Timestamptz
-	ExpiresAt        pgtype.Timestamptz
-	Visibility       ContextVisibility
-	CreatedAt        pgtype.Timestamptz
-	AllowedUserCount int32
+	ID               pgtype.UUID        `json:"id"`
+	RepoID           pgtype.UUID        `json:"repo_id"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	OrgID            pgtype.UUID        `json:"org_id"`
+	TargetSnapshotID pgtype.UUID        `json:"target_snapshot_id"`
+	Label            pgtype.Text        `json:"label"`
+	LastUsedAt       pgtype.Timestamptz `json:"last_used_at"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	Visibility       ContextVisibility  `json:"visibility"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	AllowedUserCount int32              `json:"allowed_user_count"`
 }
 
 func (q *Queries) ListContextTokensByRepo(ctx context.Context, repoID pgtype.UUID) ([]ListContextTokensByRepoRow, error) {

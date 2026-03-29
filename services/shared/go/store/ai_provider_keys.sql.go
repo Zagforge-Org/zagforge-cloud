@@ -16,8 +16,8 @@ DELETE FROM ai_provider_keys WHERE org_id = $1 AND provider = $2
 `
 
 type DeleteAIProviderKeyForOrgParams struct {
-	OrgID    pgtype.UUID
-	Provider string
+	OrgID    pgtype.UUID `json:"org_id"`
+	Provider string      `json:"provider"`
 }
 
 func (q *Queries) DeleteAIProviderKeyForOrg(ctx context.Context, arg DeleteAIProviderKeyForOrgParams) error {
@@ -30,8 +30,8 @@ DELETE FROM ai_provider_keys WHERE user_id = $1 AND provider = $2
 `
 
 type DeleteAIProviderKeyForUserParams struct {
-	UserID   pgtype.UUID
-	Provider string
+	UserID   pgtype.UUID `json:"user_id"`
+	Provider string      `json:"provider"`
 }
 
 func (q *Queries) DeleteAIProviderKeyForUser(ctx context.Context, arg DeleteAIProviderKeyForUserParams) error {
@@ -46,18 +46,18 @@ WHERE org_id = $1 AND provider = $2
 `
 
 type GetAIProviderKeyForOrgParams struct {
-	OrgID    pgtype.UUID
-	Provider string
+	OrgID    pgtype.UUID `json:"org_id"`
+	Provider string      `json:"provider"`
 }
 
 type GetAIProviderKeyForOrgRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyCipher []byte             `json:"key_cipher"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) GetAIProviderKeyForOrg(ctx context.Context, arg GetAIProviderKeyForOrgParams) (GetAIProviderKeyForOrgRow, error) {
@@ -82,18 +82,18 @@ WHERE user_id = $1 AND provider = $2
 `
 
 type GetAIProviderKeyForUserParams struct {
-	UserID   pgtype.UUID
-	Provider string
+	UserID   pgtype.UUID `json:"user_id"`
+	Provider string      `json:"provider"`
 }
 
 type GetAIProviderKeyForUserRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyCipher []byte             `json:"key_cipher"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) GetAIProviderKeyForUser(ctx context.Context, arg GetAIProviderKeyForUserParams) (GetAIProviderKeyForUserRow, error) {
@@ -119,12 +119,12 @@ ORDER BY provider ASC
 `
 
 type ListAIProviderKeysByOrgRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListAIProviderKeysByOrg(ctx context.Context, orgID pgtype.UUID) ([]ListAIProviderKeysByOrgRow, error) {
@@ -162,12 +162,12 @@ ORDER BY provider ASC
 `
 
 type ListAIProviderKeysByUserRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListAIProviderKeysByUser(ctx context.Context, userID pgtype.UUID) ([]ListAIProviderKeysByUserRow, error) {
@@ -207,20 +207,20 @@ RETURNING id, user_id, org_id, provider, key_cipher, key_hint, created_at
 `
 
 type UpsertAIProviderKeyForOrgParams struct {
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
+	OrgID     pgtype.UUID `json:"org_id"`
+	Provider  string      `json:"provider"`
+	KeyCipher []byte      `json:"key_cipher"`
+	KeyHint   string      `json:"key_hint"`
 }
 
 type UpsertAIProviderKeyForOrgRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyCipher []byte             `json:"key_cipher"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) UpsertAIProviderKeyForOrg(ctx context.Context, arg UpsertAIProviderKeyForOrgParams) (UpsertAIProviderKeyForOrgRow, error) {
@@ -253,20 +253,20 @@ RETURNING id, user_id, org_id, provider, key_cipher, key_hint, created_at
 `
 
 type UpsertAIProviderKeyForUserParams struct {
-	UserID    pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
+	UserID    pgtype.UUID `json:"user_id"`
+	Provider  string      `json:"provider"`
+	KeyCipher []byte      `json:"key_cipher"`
+	KeyHint   string      `json:"key_hint"`
 }
 
 type UpsertAIProviderKeyForUserRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyCipher []byte             `json:"key_cipher"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) UpsertAIProviderKeyForUser(ctx context.Context, arg UpsertAIProviderKeyForUserParams) (UpsertAIProviderKeyForUserRow, error) {

@@ -116,12 +116,12 @@ RETURNING id, auth_user_id, username, email, email_verified, phone, avatar_url, 
 `
 
 type UpdateUserParams struct {
-	Username      string
-	Email         string
-	EmailVerified bool
-	Phone         pgtype.Text
-	AvatarUrl     pgtype.Text
-	ID            pgtype.UUID
+	Username      string      `json:"username"`
+	Email         string      `json:"email"`
+	EmailVerified bool        `json:"email_verified"`
+	Phone         pgtype.Text `json:"phone"`
+	AvatarUrl     pgtype.Text `json:"avatar_url"`
+	ID            pgtype.UUID `json:"id"`
 }
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error) {
@@ -161,12 +161,12 @@ RETURNING id, auth_user_id, username, email, email_verified, phone, avatar_url, 
 `
 
 type UpsertUserParams struct {
-	AuthUserID    string
-	Username      string
-	Email         string
-	EmailVerified bool
-	Phone         pgtype.Text
-	AvatarUrl     pgtype.Text
+	AuthUserID    string      `json:"auth_user_id"`
+	Username      string      `json:"username"`
+	Email         string      `json:"email"`
+	EmailVerified bool        `json:"email_verified"`
+	Phone         pgtype.Text `json:"phone"`
+	AvatarUrl     pgtype.Text `json:"avatar_url"`
 }
 
 func (q *Queries) UpsertUser(ctx context.Context, arg UpsertUserParams) (User, error) {

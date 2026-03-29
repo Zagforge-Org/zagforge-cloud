@@ -26,8 +26,8 @@ DELETE FROM sessions WHERE id = $1 AND user_id = $2
 `
 
 type DeleteSessionParams struct {
-	ID     pgtype.UUID
-	UserID pgtype.UUID
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) DeleteSession(ctx context.Context, arg DeleteSessionParams) error {
@@ -89,10 +89,10 @@ RETURNING id, user_id, auth_session_id, device_name, ip_address, last_active_at,
 `
 
 type UpsertSessionParams struct {
-	UserID        pgtype.UUID
-	AuthSessionID string
-	DeviceName    pgtype.Text
-	IpAddress     *netip.Addr
+	UserID        pgtype.UUID `json:"user_id"`
+	AuthSessionID string      `json:"auth_session_id"`
+	DeviceName    pgtype.Text `json:"device_name"`
+	IpAddress     *netip.Addr `json:"ip_address"`
 }
 
 func (q *Queries) UpsertSession(ctx context.Context, arg UpsertSessionParams) (Session, error) {

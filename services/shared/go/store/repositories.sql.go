@@ -16,8 +16,8 @@ SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, i
 `
 
 type GetRepoByFullNameAndOrgParams struct {
-	FullName string
-	OrgID    pgtype.UUID
+	FullName string      `json:"full_name"`
+	OrgID    pgtype.UUID `json:"org_id"`
 }
 
 func (q *Queries) GetRepoByFullNameAndOrg(ctx context.Context, arg GetRepoByFullNameAndOrgParams) (Repository, error) {
@@ -41,8 +41,8 @@ SELECT id, org_id, github_repo_id, installation_id, full_name, default_branch, i
 `
 
 type GetRepoByFullNameAndUserParams struct {
-	FullName string
-	UserID   pgtype.UUID
+	FullName string      `json:"full_name"`
+	UserID   pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) GetRepoByFullNameAndUser(ctx context.Context, arg GetRepoByFullNameAndUserParams) (Repository, error) {
@@ -110,9 +110,9 @@ LIMIT $3
 `
 
 type ListReposByOrgParams struct {
-	OrgID    pgtype.UUID
-	FullName string
-	Limit    int32
+	OrgID    pgtype.UUID `json:"org_id"`
+	FullName string      `json:"full_name"`
+	Limit    int32       `json:"limit"`
 }
 
 func (q *Queries) ListReposByOrg(ctx context.Context, arg ListReposByOrgParams) ([]Repository, error) {
@@ -153,9 +153,9 @@ LIMIT $3
 `
 
 type ListReposByUserParams struct {
-	UserID   pgtype.UUID
-	FullName string
-	Limit    int32
+	UserID   pgtype.UUID `json:"user_id"`
+	FullName string      `json:"full_name"`
+	Limit    int32       `json:"limit"`
 }
 
 func (q *Queries) ListReposByUser(ctx context.Context, arg ListReposByUserParams) ([]Repository, error) {
@@ -198,12 +198,12 @@ RETURNING id, org_id, github_repo_id, installation_id, full_name, default_branch
 `
 
 type UpsertRepoParams struct {
-	UserID         pgtype.UUID
-	OrgID          pgtype.UUID
-	GithubRepoID   int64
-	InstallationID int64
-	FullName       string
-	DefaultBranch  string
+	UserID         pgtype.UUID `json:"user_id"`
+	OrgID          pgtype.UUID `json:"org_id"`
+	GithubRepoID   int64       `json:"github_repo_id"`
+	InstallationID int64       `json:"installation_id"`
+	FullName       string      `json:"full_name"`
+	DefaultBranch  string      `json:"default_branch"`
 }
 
 func (q *Queries) UpsertRepo(ctx context.Context, arg UpsertRepoParams) (Repository, error) {

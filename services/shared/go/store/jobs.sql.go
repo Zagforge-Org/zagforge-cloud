@@ -50,10 +50,10 @@ RETURNING id, repo_id, branch, commit_sha, delivery_id, status, error_message, c
 `
 
 type CreateJobParams struct {
-	RepoID    pgtype.UUID
-	Branch    string
-	CommitSha string
-	Column4   interface{}
+	RepoID    pgtype.UUID `json:"repo_id"`
+	Branch    string      `json:"branch"`
+	CommitSha string      `json:"commit_sha"`
+	Column4   interface{} `json:"column_4"`
 }
 
 func (q *Queries) CreateJob(ctx context.Context, arg CreateJobParams) (Job, error) {
@@ -89,8 +89,8 @@ ORDER BY created_at ASC
 `
 
 type GetActiveJobsForBranchParams struct {
-	RepoID pgtype.UUID
-	Branch string
+	RepoID pgtype.UUID `json:"repo_id"`
+	Branch string      `json:"branch"`
 }
 
 func (q *Queries) GetActiveJobsForBranch(ctx context.Context, arg GetActiveJobsForBranchParams) ([]Job, error) {
@@ -179,11 +179,11 @@ WHERE j.id = $1
 `
 
 type GetRepoForJobRow struct {
-	ID             pgtype.UUID
-	GithubRepoID   int64
-	InstallationID int64
-	FullName       string
-	DefaultBranch  string
+	ID             pgtype.UUID `json:"id"`
+	GithubRepoID   int64       `json:"github_repo_id"`
+	InstallationID int64       `json:"installation_id"`
+	FullName       string      `json:"full_name"`
+	DefaultBranch  string      `json:"default_branch"`
 }
 
 func (q *Queries) GetRepoForJob(ctx context.Context, id pgtype.UUID) (GetRepoForJobRow, error) {
@@ -208,9 +208,9 @@ LIMIT $3
 `
 
 type ListJobsByRepoParams struct {
-	RepoID    pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	Limit     int32
+	RepoID    pgtype.UUID        `json:"repo_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Limit     int32              `json:"limit"`
 }
 
 func (q *Queries) ListJobsByRepo(ctx context.Context, arg ListJobsByRepoParams) ([]Job, error) {
@@ -279,8 +279,8 @@ UPDATE jobs SET commit_sha = $2 WHERE id = $1 AND status = 'queued'
 `
 
 type UpdateJobCommitSHAParams struct {
-	ID        pgtype.UUID
-	CommitSha string
+	ID        pgtype.UUID `json:"id"`
+	CommitSha string      `json:"commit_sha"`
 }
 
 func (q *Queries) UpdateJobCommitSHA(ctx context.Context, arg UpdateJobCommitSHAParams) error {
@@ -298,9 +298,9 @@ WHERE id = $1
 `
 
 type UpdateJobStatusParams struct {
-	ID           pgtype.UUID
-	Status       JobStatus
-	ErrorMessage pgtype.Text
+	ID           pgtype.UUID `json:"id"`
+	Status       JobStatus   `json:"status"`
+	ErrorMessage pgtype.Text `json:"error_message"`
 }
 
 func (q *Queries) UpdateJobStatus(ctx context.Context, arg UpdateJobStatusParams) error {

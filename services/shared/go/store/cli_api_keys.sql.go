@@ -16,8 +16,8 @@ DELETE FROM cli_api_keys WHERE id = $1 AND org_id = $2
 `
 
 type DeleteCLIAPIKeyForOrgParams struct {
-	ID    pgtype.UUID
-	OrgID pgtype.UUID
+	ID    pgtype.UUID `json:"id"`
+	OrgID pgtype.UUID `json:"org_id"`
 }
 
 func (q *Queries) DeleteCLIAPIKeyForOrg(ctx context.Context, arg DeleteCLIAPIKeyForOrgParams) error {
@@ -30,8 +30,8 @@ DELETE FROM cli_api_keys WHERE id = $1 AND user_id = $2
 `
 
 type DeleteCLIAPIKeyForUserParams struct {
-	ID     pgtype.UUID
-	UserID pgtype.UUID
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) DeleteCLIAPIKeyForUser(ctx context.Context, arg DeleteCLIAPIKeyForUserParams) error {
@@ -65,11 +65,11 @@ RETURNING id, user_id, org_id, key_hash, key_hint, label, created_at
 `
 
 type InsertCLIAPIKeyParams struct {
-	OrgID   pgtype.UUID
-	UserID  pgtype.UUID
-	KeyHash string
-	KeyHint string
-	Label   string
+	OrgID   pgtype.UUID `json:"org_id"`
+	UserID  pgtype.UUID `json:"user_id"`
+	KeyHash string      `json:"key_hash"`
+	KeyHint string      `json:"key_hint"`
+	Label   string      `json:"label"`
 }
 
 func (q *Queries) InsertCLIAPIKey(ctx context.Context, arg InsertCLIAPIKeyParams) (CliApiKey, error) {
@@ -101,12 +101,12 @@ ORDER BY created_at DESC
 `
 
 type ListCLIAPIKeysByOrgRow struct {
-	ID        pgtype.UUID
-	OrgID     pgtype.UUID
-	UserID    pgtype.UUID
-	KeyHint   string
-	Label     string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	KeyHint   string             `json:"key_hint"`
+	Label     string             `json:"label"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListCLIAPIKeysByOrg(ctx context.Context, orgID pgtype.UUID) ([]ListCLIAPIKeysByOrgRow, error) {
@@ -144,12 +144,12 @@ ORDER BY created_at DESC
 `
 
 type ListCLIAPIKeysByUserRow struct {
-	ID        pgtype.UUID
-	OrgID     pgtype.UUID
-	UserID    pgtype.UUID
-	KeyHint   string
-	Label     string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	KeyHint   string             `json:"key_hint"`
+	Label     string             `json:"label"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListCLIAPIKeysByUser(ctx context.Context, userID pgtype.UUID) ([]ListCLIAPIKeysByUserRow, error) {

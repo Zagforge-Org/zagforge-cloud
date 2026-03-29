@@ -18,12 +18,12 @@ RETURNING id, user_id, org_id, actor_id, action, target_id, metadata, created_at
 `
 
 type InsertAuditLogParams struct {
-	UserID   pgtype.UUID
-	OrgID    pgtype.UUID
-	ActorID  pgtype.UUID
-	Action   string
-	TargetID pgtype.UUID
-	Metadata []byte
+	UserID   pgtype.UUID `json:"user_id"`
+	OrgID    pgtype.UUID `json:"org_id"`
+	ActorID  pgtype.UUID `json:"actor_id"`
+	Action   string      `json:"action"`
+	TargetID pgtype.UUID `json:"target_id"`
+	Metadata []byte      `json:"metadata"`
 }
 
 func (q *Queries) InsertAuditLog(ctx context.Context, arg InsertAuditLogParams) (AuditLog, error) {
@@ -60,21 +60,21 @@ LIMIT $3
 `
 
 type ListAuditLogByOrgParams struct {
-	OrgID     pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	Limit     int32
+	OrgID     pgtype.UUID        `json:"org_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Limit     int32              `json:"limit"`
 }
 
 type ListAuditLogByOrgRow struct {
-	ID            pgtype.UUID
-	UserID        pgtype.UUID
-	OrgID         pgtype.UUID
-	ActorID       pgtype.UUID
-	Action        string
-	TargetID      pgtype.UUID
-	Metadata      []byte
-	CreatedAt     pgtype.Timestamptz
-	ActorUsername string
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	OrgID         pgtype.UUID        `json:"org_id"`
+	ActorID       pgtype.UUID        `json:"actor_id"`
+	Action        string             `json:"action"`
+	TargetID      pgtype.UUID        `json:"target_id"`
+	Metadata      []byte             `json:"metadata"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ActorUsername string             `json:"actor_username"`
 }
 
 func (q *Queries) ListAuditLogByOrg(ctx context.Context, arg ListAuditLogByOrgParams) ([]ListAuditLogByOrgRow, error) {
@@ -118,21 +118,21 @@ LIMIT $3
 `
 
 type ListAuditLogByUserParams struct {
-	UserID    pgtype.UUID
-	CreatedAt pgtype.Timestamptz
-	Limit     int32
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	Limit     int32              `json:"limit"`
 }
 
 type ListAuditLogByUserRow struct {
-	ID            pgtype.UUID
-	UserID        pgtype.UUID
-	OrgID         pgtype.UUID
-	ActorID       pgtype.UUID
-	Action        string
-	TargetID      pgtype.UUID
-	Metadata      []byte
-	CreatedAt     pgtype.Timestamptz
-	ActorUsername string
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	OrgID         pgtype.UUID        `json:"org_id"`
+	ActorID       pgtype.UUID        `json:"actor_id"`
+	Action        string             `json:"action"`
+	TargetID      pgtype.UUID        `json:"target_id"`
+	Metadata      []byte             `json:"metadata"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	ActorUsername string             `json:"actor_username"`
 }
 
 func (q *Queries) ListAuditLogByUser(ctx context.Context, arg ListAuditLogByUserParams) ([]ListAuditLogByUserRow, error) {

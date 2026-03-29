@@ -8,6 +8,8 @@ sql:
         package: "store"
         out: "../shared/go/store"
         sql_package: "pgx/v5"
+        emit_json_tags: true
+        json_tags_case_style: snake
         overrides:
           - column: "jobs.status"
             go_type:

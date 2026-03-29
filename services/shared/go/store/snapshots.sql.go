@@ -19,8 +19,8 @@ LIMIT 1
 `
 
 type GetLatestSnapshotParams struct {
-	RepoID pgtype.UUID
-	Branch string
+	RepoID pgtype.UUID `json:"repo_id"`
+	Branch string      `json:"branch"`
 }
 
 func (q *Queries) GetLatestSnapshot(ctx context.Context, arg GetLatestSnapshotParams) (Snapshot, error) {
@@ -72,8 +72,8 @@ ORDER BY created_at DESC
 `
 
 type GetSnapshotsByBranchParams struct {
-	RepoID pgtype.UUID
-	Branch string
+	RepoID pgtype.UUID `json:"repo_id"`
+	Branch string      `json:"branch"`
 }
 
 func (q *Queries) GetSnapshotsByBranch(ctx context.Context, arg GetSnapshotsByBranchParams) ([]Snapshot, error) {
@@ -124,28 +124,28 @@ RETURNING id, repo_id, job_id, branch, commit_sha, gcs_path,
 `
 
 type InsertCLISnapshotParams struct {
-	RepoID          pgtype.UUID
-	Branch          string
-	CommitSha       string
-	GcsPath         string
-	SnapshotVersion int32
-	ZigzagVersion   string
-	SizeBytes       int64
-	Metadata        []byte
+	RepoID          pgtype.UUID `json:"repo_id"`
+	Branch          string      `json:"branch"`
+	CommitSha       string      `json:"commit_sha"`
+	GcsPath         string      `json:"gcs_path"`
+	SnapshotVersion int32       `json:"snapshot_version"`
+	ZigzagVersion   string      `json:"zigzag_version"`
+	SizeBytes       int64       `json:"size_bytes"`
+	Metadata        []byte      `json:"metadata"`
 }
 
 type InsertCLISnapshotRow struct {
-	ID              pgtype.UUID
-	RepoID          pgtype.UUID
-	JobID           pgtype.UUID
-	Branch          string
-	CommitSha       string
-	GcsPath         string
-	SnapshotVersion int32
-	ZigzagVersion   string
-	SizeBytes       int64
-	Metadata        []byte
-	CreatedAt       pgtype.Timestamptz
+	ID              pgtype.UUID        `json:"id"`
+	RepoID          pgtype.UUID        `json:"repo_id"`
+	JobID           pgtype.UUID        `json:"job_id"`
+	Branch          string             `json:"branch"`
+	CommitSha       string             `json:"commit_sha"`
+	GcsPath         string             `json:"gcs_path"`
+	SnapshotVersion int32              `json:"snapshot_version"`
+	ZigzagVersion   string             `json:"zigzag_version"`
+	SizeBytes       int64              `json:"size_bytes"`
+	Metadata        []byte             `json:"metadata"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) InsertCLISnapshot(ctx context.Context, arg InsertCLISnapshotParams) (InsertCLISnapshotRow, error) {
@@ -183,14 +183,14 @@ RETURNING id, repo_id, job_id, branch, commit_sha, gcs_path, snapshot_version, z
 `
 
 type InsertSnapshotParams struct {
-	RepoID          pgtype.UUID
-	JobID           pgtype.UUID
-	Branch          string
-	CommitSha       string
-	GcsPath         string
-	SnapshotVersion int32
-	ZigzagVersion   string
-	SizeBytes       int64
+	RepoID          pgtype.UUID `json:"repo_id"`
+	JobID           pgtype.UUID `json:"job_id"`
+	Branch          string      `json:"branch"`
+	CommitSha       string      `json:"commit_sha"`
+	GcsPath         string      `json:"gcs_path"`
+	SnapshotVersion int32       `json:"snapshot_version"`
+	ZigzagVersion   string      `json:"zigzag_version"`
+	SizeBytes       int64       `json:"size_bytes"`
 }
 
 func (q *Queries) InsertSnapshot(ctx context.Context, arg InsertSnapshotParams) (Snapshot, error) {

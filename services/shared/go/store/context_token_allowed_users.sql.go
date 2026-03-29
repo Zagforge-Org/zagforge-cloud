@@ -17,8 +17,8 @@ WHERE token_id = $1 AND user_id = $2
 `
 
 type DeleteContextTokenAllowedUserParams struct {
-	TokenID pgtype.UUID
-	UserID  pgtype.UUID
+	TokenID pgtype.UUID `json:"token_id"`
+	UserID  pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) DeleteContextTokenAllowedUser(ctx context.Context, arg DeleteContextTokenAllowedUserParams) error {
@@ -33,8 +33,8 @@ ON CONFLICT (token_id, user_id) DO NOTHING
 `
 
 type InsertContextTokenAllowedUserParams struct {
-	TokenID pgtype.UUID
-	UserID  pgtype.UUID
+	TokenID pgtype.UUID `json:"token_id"`
+	UserID  pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) InsertContextTokenAllowedUser(ctx context.Context, arg InsertContextTokenAllowedUserParams) error {
@@ -50,8 +50,8 @@ SELECT EXISTS (
 `
 
 type IsUserAllowedForTokenParams struct {
-	TokenID pgtype.UUID
-	UserID  pgtype.UUID
+	TokenID pgtype.UUID `json:"token_id"`
+	UserID  pgtype.UUID `json:"user_id"`
 }
 
 func (q *Queries) IsUserAllowedForToken(ctx context.Context, arg IsUserAllowedForTokenParams) (bool, error) {
@@ -70,11 +70,11 @@ ORDER BY ctau.created_at DESC
 `
 
 type ListContextTokenAllowedUsersRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	Username  string
-	Email     string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ListContextTokenAllowedUsers(ctx context.Context, tokenID pgtype.UUID) ([]ListContextTokenAllowedUsersRow, error) {

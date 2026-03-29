@@ -40,10 +40,10 @@ RETURNING id, user_id, org_id, role, invited_by, joined_at
 `
 
 type CreateMembershipParams struct {
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Role      string
-	InvitedBy pgtype.UUID
+	UserID    pgtype.UUID `json:"user_id"`
+	OrgID     pgtype.UUID `json:"org_id"`
+	Role      string      `json:"role"`
+	InvitedBy pgtype.UUID `json:"invited_by"`
 }
 
 func (q *Queries) CreateMembership(ctx context.Context, arg CreateMembershipParams) (Membership, error) {
@@ -70,8 +70,8 @@ DELETE FROM memberships WHERE user_id = $1 AND org_id = $2
 `
 
 type DeleteMembershipParams struct {
-	UserID pgtype.UUID
-	OrgID  pgtype.UUID
+	UserID pgtype.UUID `json:"user_id"`
+	OrgID  pgtype.UUID `json:"org_id"`
 }
 
 func (q *Queries) DeleteMembership(ctx context.Context, arg DeleteMembershipParams) error {
@@ -84,8 +84,8 @@ SELECT id, user_id, org_id, role, invited_by, joined_at FROM memberships WHERE u
 `
 
 type GetMembershipParams struct {
-	UserID pgtype.UUID
-	OrgID  pgtype.UUID
+	UserID pgtype.UUID `json:"user_id"`
+	OrgID  pgtype.UUID `json:"org_id"`
 }
 
 func (q *Queries) GetMembership(ctx context.Context, arg GetMembershipParams) (Membership, error) {
@@ -111,15 +111,15 @@ ORDER BY m.joined_at ASC
 `
 
 type ListMembershipsByOrgRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Role      string
-	InvitedBy pgtype.UUID
-	JoinedAt  pgtype.Timestamptz
-	Username  string
-	Email     string
-	AvatarUrl pgtype.Text
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Role      string             `json:"role"`
+	InvitedBy pgtype.UUID        `json:"invited_by"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+	Username  string             `json:"username"`
+	Email     string             `json:"email"`
+	AvatarUrl pgtype.Text        `json:"avatar_url"`
 }
 
 func (q *Queries) ListMembershipsByOrg(ctx context.Context, orgID pgtype.UUID) ([]ListMembershipsByOrgRow, error) {
@@ -161,14 +161,14 @@ ORDER BY m.joined_at ASC
 `
 
 type ListMembershipsByUserRow struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Role      string
-	InvitedBy pgtype.UUID
-	JoinedAt  pgtype.Timestamptz
-	OrgSlug   string
-	OrgName   string
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Role      string             `json:"role"`
+	InvitedBy pgtype.UUID        `json:"invited_by"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
+	OrgSlug   string             `json:"org_slug"`
+	OrgName   string             `json:"org_name"`
 }
 
 func (q *Queries) ListMembershipsByUser(ctx context.Context, userID pgtype.UUID) ([]ListMembershipsByUserRow, error) {
@@ -207,9 +207,9 @@ RETURNING id, user_id, org_id, role, invited_by, joined_at
 `
 
 type UpdateMembershipRoleParams struct {
-	UserID pgtype.UUID
-	OrgID  pgtype.UUID
-	Role   string
+	UserID pgtype.UUID `json:"user_id"`
+	OrgID  pgtype.UUID `json:"org_id"`
+	Role   string      `json:"role"`
 }
 
 func (q *Queries) UpdateMembershipRole(ctx context.Context, arg UpdateMembershipRoleParams) (Membership, error) {

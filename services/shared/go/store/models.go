@@ -33,8 +33,8 @@ func (e *ContextVisibility) Scan(src interface{}) error {
 }
 
 type NullContextVisibility struct {
-	ContextVisibility ContextVisibility
-	Valid             bool // Valid is true if ContextVisibility is not NULL
+	ContextVisibility ContextVisibility `json:"context_visibility"`
+	Valid             bool              `json:"valid"` // Valid is true if ContextVisibility is not NULL
 }
 
 // Scan implements the Scanner interface.
@@ -56,131 +56,131 @@ func (ns NullContextVisibility) Value() (driver.Value, error) {
 }
 
 type AiProviderKey struct {
-	ID        pgtype.UUID
-	OrgID     pgtype.UUID
-	Provider  string
-	KeyCipher []byte
-	KeyHint   string
-	CreatedAt pgtype.Timestamptz
-	UserID    pgtype.UUID
+	ID        pgtype.UUID        `json:"id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Provider  string             `json:"provider"`
+	KeyCipher []byte             `json:"key_cipher"`
+	KeyHint   string             `json:"key_hint"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	UserID    pgtype.UUID        `json:"user_id"`
 }
 
 type AuditLog struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	ActorID   pgtype.UUID
-	Action    string
-	TargetID  pgtype.UUID
-	Metadata  []byte
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	ActorID   pgtype.UUID        `json:"actor_id"`
+	Action    string             `json:"action"`
+	TargetID  pgtype.UUID        `json:"target_id"`
+	Metadata  []byte             `json:"metadata"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type CliApiKey struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	KeyHash   string
-	KeyHint   string
-	Label     string
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	KeyHash   string             `json:"key_hash"`
+	KeyHint   string             `json:"key_hint"`
+	Label     string             `json:"label"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type ContextToken struct {
-	ID               pgtype.UUID
-	RepoID           pgtype.UUID
-	OrgID            pgtype.UUID
-	TargetSnapshotID pgtype.UUID
-	TokenHash        string
-	Label            pgtype.Text
-	LastUsedAt       pgtype.Timestamptz
-	ExpiresAt        pgtype.Timestamptz
-	CreatedAt        pgtype.Timestamptz
-	UserID           pgtype.UUID
-	Visibility       ContextVisibility
+	ID               pgtype.UUID        `json:"id"`
+	RepoID           pgtype.UUID        `json:"repo_id"`
+	OrgID            pgtype.UUID        `json:"org_id"`
+	TargetSnapshotID pgtype.UUID        `json:"target_snapshot_id"`
+	TokenHash        string             `json:"token_hash"`
+	Label            pgtype.Text        `json:"label"`
+	LastUsedAt       pgtype.Timestamptz `json:"last_used_at"`
+	ExpiresAt        pgtype.Timestamptz `json:"expires_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UserID           pgtype.UUID        `json:"user_id"`
+	Visibility       ContextVisibility  `json:"visibility"`
 }
 
 type ContextTokenAllowedUser struct {
-	ID        pgtype.UUID
-	TokenID   pgtype.UUID
-	UserID    pgtype.UUID
-	CreatedAt pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	TokenID   pgtype.UUID        `json:"token_id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
 type Job struct {
-	ID           pgtype.UUID
-	RepoID       pgtype.UUID
-	Branch       string
-	CommitSha    string
-	DeliveryID   pgtype.Text
-	Status       JobStatus
-	ErrorMessage pgtype.Text
-	CreatedAt    pgtype.Timestamptz
-	UpdatedAt    pgtype.Timestamptz
-	StartedAt    pgtype.Timestamptz
-	FinishedAt   pgtype.Timestamptz
+	ID           pgtype.UUID        `json:"id"`
+	RepoID       pgtype.UUID        `json:"repo_id"`
+	Branch       string             `json:"branch"`
+	CommitSha    string             `json:"commit_sha"`
+	DeliveryID   pgtype.Text        `json:"delivery_id"`
+	Status       JobStatus          `json:"status"`
+	ErrorMessage pgtype.Text        `json:"error_message"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	StartedAt    pgtype.Timestamptz `json:"started_at"`
+	FinishedAt   pgtype.Timestamptz `json:"finished_at"`
 }
 
 type Membership struct {
-	ID        pgtype.UUID
-	UserID    pgtype.UUID
-	OrgID     pgtype.UUID
-	Role      string
-	InvitedBy pgtype.UUID
-	JoinedAt  pgtype.Timestamptz
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	OrgID     pgtype.UUID        `json:"org_id"`
+	Role      string             `json:"role"`
+	InvitedBy pgtype.UUID        `json:"invited_by"`
+	JoinedAt  pgtype.Timestamptz `json:"joined_at"`
 }
 
 type Organization struct {
-	ID        pgtype.UUID
-	Slug      string
-	Name      string
-	CreatedAt pgtype.Timestamptz
-	AuthOrgID string
+	ID        pgtype.UUID        `json:"id"`
+	Slug      string             `json:"slug"`
+	Name      string             `json:"name"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	AuthOrgID string             `json:"auth_org_id"`
 }
 
 type Repository struct {
-	ID             pgtype.UUID
-	OrgID          pgtype.UUID
-	GithubRepoID   int64
-	InstallationID int64
-	FullName       string
-	DefaultBranch  string
-	InstalledAt    pgtype.Timestamptz
-	UserID         pgtype.UUID
+	ID             pgtype.UUID        `json:"id"`
+	OrgID          pgtype.UUID        `json:"org_id"`
+	GithubRepoID   int64              `json:"github_repo_id"`
+	InstallationID int64              `json:"installation_id"`
+	FullName       string             `json:"full_name"`
+	DefaultBranch  string             `json:"default_branch"`
+	InstalledAt    pgtype.Timestamptz `json:"installed_at"`
+	UserID         pgtype.UUID        `json:"user_id"`
 }
 
 type Session struct {
-	ID            pgtype.UUID
-	UserID        pgtype.UUID
-	AuthSessionID string
-	DeviceName    pgtype.Text
-	IpAddress     *netip.Addr
-	LastActiveAt  pgtype.Timestamptz
-	CreatedAt     pgtype.Timestamptz
+	ID            pgtype.UUID        `json:"id"`
+	UserID        pgtype.UUID        `json:"user_id"`
+	AuthSessionID string             `json:"auth_session_id"`
+	DeviceName    pgtype.Text        `json:"device_name"`
+	IpAddress     *netip.Addr        `json:"ip_address"`
+	LastActiveAt  pgtype.Timestamptz `json:"last_active_at"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
 }
 
 type Snapshot struct {
-	ID              pgtype.UUID
-	RepoID          pgtype.UUID
-	JobID           pgtype.UUID
-	Branch          string
-	CommitSha       string
-	GcsPath         string
-	SnapshotVersion int32
-	ZigzagVersion   string
-	SizeBytes       int64
-	CreatedAt       pgtype.Timestamptz
-	Metadata        []byte
+	ID              pgtype.UUID        `json:"id"`
+	RepoID          pgtype.UUID        `json:"repo_id"`
+	JobID           pgtype.UUID        `json:"job_id"`
+	Branch          string             `json:"branch"`
+	CommitSha       string             `json:"commit_sha"`
+	GcsPath         string             `json:"gcs_path"`
+	SnapshotVersion int32              `json:"snapshot_version"`
+	ZigzagVersion   string             `json:"zigzag_version"`
+	SizeBytes       int64              `json:"size_bytes"`
+	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	Metadata        []byte             `json:"metadata"`
 }
 
 type User struct {
-	ID            pgtype.UUID
-	AuthUserID    string
-	Username      string
-	Email         string
-	EmailVerified bool
-	Phone         pgtype.Text
-	AvatarUrl     pgtype.Text
-	CreatedAt     pgtype.Timestamptz
-	UpdatedAt     pgtype.Timestamptz
+	ID            pgtype.UUID        `json:"id"`
+	AuthUserID    string             `json:"auth_user_id"`
+	Username      string             `json:"username"`
+	Email         string             `json:"email"`
+	EmailVerified bool               `json:"email_verified"`
+	Phone         pgtype.Text        `json:"phone"`
+	AvatarUrl     pgtype.Text        `json:"avatar_url"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
 }
