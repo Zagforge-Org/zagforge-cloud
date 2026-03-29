@@ -1,5 +1,5 @@
 terraform {
   backend "gcs" {
-    bucket = "zagforge-terraform-state"
+    bucket = "zagforge-org-terraform-state"
   }
 }

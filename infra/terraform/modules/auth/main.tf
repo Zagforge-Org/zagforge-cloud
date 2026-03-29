@@ -30,10 +30,6 @@ resource "google_cloud_run_v2_service" "auth" {
         value = var.environment
       }
       env {
-        name  = "PORT"
-        value = "8081"
-      }
-      env {
         name  = "JWT_ISSUER"
         value = var.jwt_issuer
       }

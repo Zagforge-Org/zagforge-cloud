@@ -103,6 +103,51 @@ variable "auth_max_instances" {
   default     = 2
 }
 
+# Worker scaling
+variable "worker_cpu" {
+  description = "Worker CPU allocation"
+  type        = string
+  default     = "1"
+}
+
+variable "worker_memory" {
+  description = "Worker memory allocation"
+  type        = string
+  default     = "2Gi"
+}
+
+variable "worker_max_instances" {
+  description = "Maximum worker instances"
+  type        = number
+  default     = 2
+}
+
+variable "worker_timeout" {
+  description = "Worker request timeout"
+  type        = string
+  default     = "900s"
+}
+
+# Queue
+variable "queue_max_concurrent" {
+  description = "Max concurrent task dispatches"
+  type        = number
+  default     = 3
+}
+
+variable "queue_max_per_second" {
+  description = "Max task dispatches per second"
+  type        = number
+  default     = 1
+}
+
+# Scheduler
+variable "watchdog_schedule" {
+  description = "Cron schedule for watchdog"
+  type        = string
+  default     = "*/30 * * * *"
+}
+
 # Networking
 variable "cloud_armor_enabled" {
   description = "Enable Cloud Armor WAF (off in dev, on in prod)"

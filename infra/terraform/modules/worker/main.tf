@@ -13,10 +13,10 @@ resource "google_cloud_run_v2_service" "worker" {
 
     scaling {
       min_instance_count = 0
-      max_instance_count = 5
+      max_instance_count = var.max_instances
     }
 
-    timeout = "900s"
+    timeout = var.timeout
 
     containers {
       # Placeholder image — GitHub Actions owns the actual image tag.
@@ -28,8 +28,8 @@ resource "google_cloud_run_v2_service" "worker" {
 
       resources {
         limits = {
-          cpu    = "2"
-          memory = "4Gi"
+          cpu    = var.cpu
+          memory = var.memory
         }
       }
 

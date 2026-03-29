@@ -3,8 +3,8 @@ resource "google_cloud_tasks_queue" "jobs" {
   location = var.region
 
   rate_limits {
-    max_concurrent_dispatches = 10
-    max_dispatches_per_second = 5
+    max_concurrent_dispatches = var.max_concurrent_dispatches
+    max_dispatches_per_second = var.max_dispatches_per_second
   }
 
   retry_config {
@@ -12,6 +12,6 @@ resource "google_cloud_tasks_queue" "jobs" {
     min_backoff        = "10s"
     max_backoff        = "300s"
     max_doublings      = 4
-    max_retry_duration = "0s"
+    max_retry_duration = "600s"
   }
 }

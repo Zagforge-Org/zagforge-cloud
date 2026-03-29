@@ -1,6 +1,6 @@
 resource "google_cloud_scheduler_job" "watchdog" {
   name     = "${var.name_prefix}-watchdog"
-  schedule = "*/5 * * * *"
+  schedule = var.watchdog_schedule
   region   = var.region
 
   http_target {

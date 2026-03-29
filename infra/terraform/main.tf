@@ -74,9 +74,11 @@ module "redis" {
 module "queue" {
   source = "./modules/queue"
 
-  project_id  = var.project_id
-  region      = var.region
-  name_prefix = local.name_prefix
+  project_id                = var.project_id
+  region                    = var.region
+  name_prefix               = local.name_prefix
+  max_concurrent_dispatches = var.queue_max_concurrent
+  max_dispatches_per_second = var.queue_max_per_second
 }
 
 # --- Auth (Cloud Run Service) ---
@@ -126,6 +128,10 @@ module "worker" {
   github_app_id = var.github_app_id
   gcs_bucket    = module.storage.bucket_name
   api_url       = var.api_url
+  cpu           = var.worker_cpu
+  memory        = var.worker_memory
+  max_instances = var.worker_max_instances
+  timeout       = var.worker_timeout
 }
 
 # --- Migration Jobs (Cloud Run Jobs) ---
@@ -148,15 +154,18 @@ module "scheduler" {
   name_prefix         = local.name_prefix
   api_url             = module.api.url
   api_service_account = module.api.service_account_email
+  watchdog_schedule   = var.watchdog_schedule
 }
 
 # --- Workload Identity Federation (GitHub Actions → GCP) ---
-module "wif" {
-  source = "./modules/wif"
-
-  project_id  = var.project_id
-  github_repo = var.github_repo
-}
+# Skipped: requires roles/owner or projectIamAdmin permissions.
+# Uncomment once IAM permissions are granted.
+# module "wif" {
+#   source = "./modules/wif"
+#
+#   project_id  = var.project_id
+#   github_repo = var.github_repo
+# }
 
 # --- Networking (LB + Cloud Armor) ---
 module "networking" {

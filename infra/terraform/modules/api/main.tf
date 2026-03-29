@@ -30,10 +30,6 @@ resource "google_cloud_run_v2_service" "api" {
         value = var.environment
       }
       env {
-        name  = "PORT"
-        value = "8080"
-      }
-      env {
         name  = "GITHUB_APP_ID"
         value = var.github_app_id
       }
@@ -73,8 +69,8 @@ resource "google_cloud_run_v2_service" "api" {
       # --- Secrets (managed by Doppler, injected at deploy time) ---
       # The following env vars are set via `doppler run -- gcloud run services update`:
       #   DATABASE_URL, REDIS_URL, GITHUB_APP_PRIVATE_KEY,
-      #   GITHUB_APP_WEBHOOK_SECRET, HMAC_SIGNING_KEY, ZITADEL_ISSUER_URL,
-      #   ZITADEL_PROJECT_ID, WATCHDOG_SECRET, ENCRYPTION_KEY_BASE64, CLI_API_KEY
+      #   GITHUB_APP_WEBHOOK_SECRET, HMAC_SIGNING_KEY, JWT_PUBLIC_KEY_BASE64,
+      #   WATCHDOG_SECRET, ENCRYPTION_KEY_BASE64, CLI_API_KEY
 
       resources {
         limits = {
