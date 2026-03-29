@@ -5,11 +5,13 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"go.uber.org/zap"
 
 	"github.com/LegationPro/zagforge/shared/go/authclaims"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
+	"github.com/LegationPro/zagforge/shared/go/store"
 )
 
 type orgIDKey struct{}
@@ -20,11 +22,12 @@ var (
 	ErrUserNotFound = errors.New("user not found")
 )
 
-// Scope returns middleware that resolves the active workspace from JWT claims.
+// Scope returns middleware that resolves the active workspace from JWT claims
+// and the X-Org-Slug request header.
 //
-// The org and user IDs come directly from the JWT issued by the auth service.
-// org_id is read from the claims.Org.ID field; user_id from claims.Subject.
-func Scope(log *zap.Logger) func(http.Handler) http.Handler {
+// It ensures the authenticated user (and org, if applicable) exist in the API
+// database via just-in-time sync from the auth service JWT claims.
+func Scope(queries *store.Queries, log *zap.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			claims, err := authclaims.FromContext(r.Context())
@@ -33,30 +36,70 @@ func Scope(log *zap.Logger) func(http.Handler) http.Handler {
 				return
 			}
 
-			// Resolve user ID from JWT subject.
-			userID, err := claims.SubjectUUID()
+			// ── Resolve user (JIT sync) ──────────────────────────
+			user, err := ensureUser(r.Context(), queries, claims)
 			if err != nil {
-				log.Warn("scope: invalid user id in claims", zap.String("sub", claims.Subject))
-				httputil.ErrResponse(w, http.StatusForbidden, ErrUserNotFound)
+				log.Error("scope: resolve user", zap.Error(err))
+				httputil.ErrResponse(w, http.StatusInternalServerError, ErrUserNotFound)
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), userIDKey{}, userID)
+			ctx := context.WithValue(r.Context(), userIDKey{}, user.ID)
 
-			// If the JWT includes an org claim, resolve the org scope.
-			if claims.Org.ID != "" {
-				orgID, err := claims.OrgUUID()
-				if err != nil {
-					log.Warn("scope: invalid org id in claims", zap.String("org_id", claims.Org.ID))
-					httputil.ErrResponse(w, http.StatusForbidden, ErrNoActiveOrg)
-					return
+			// ── Resolve org scope ────────────────────────────────
+			// Prefer X-Org-Slug header (set per-request by the frontend)
+			// over the JWT org claim (fixed at token-issue time).
+			orgSlug := r.Header.Get("X-Org-Slug")
+			orgAuthID := r.Header.Get("X-Org-ID")
+			orgName := r.Header.Get("X-Org-Name")
+
+			// Fall back to JWT claims if headers are absent.
+			if orgSlug == "" && claims.Org.Slug != "" {
+				orgSlug = claims.Org.Slug
+				orgAuthID = claims.Org.ID
+			}
+
+			if orgSlug != "" {
+				org, err := ensureOrg(r.Context(), queries, orgSlug, orgAuthID, orgName)
+				if err == nil {
+					ctx = context.WithValue(ctx, orgIDKey{}, org.ID)
 				}
-				ctx = context.WithValue(ctx, orgIDKey{}, orgID)
 			}
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
+}
+
+// ensureUser resolves or creates the user in the API database.
+func ensureUser(ctx context.Context, q *store.Queries, claims *authclaims.Claims) (store.User, error) {
+	user, err := q.GetUserByAuthID(ctx, claims.Subject)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return q.UpsertUser(ctx, store.UpsertUserParams{
+			AuthUserID: claims.Subject,
+			Username:   claims.Name,
+			Email:      claims.Email,
+		})
+	}
+	return user, err
+}
+
+// ensureOrg resolves the org by slug, creating it in the API DB if needed.
+// authID and name come from the frontend headers or JWT claims.
+func ensureOrg(ctx context.Context, q *store.Queries, slug, authID, name string) (store.Organization, error) {
+	org, err := q.GetOrganizationBySlug(ctx, slug)
+	if errors.Is(err, pgx.ErrNoRows) && authID != "" {
+		// Org exists in auth DB but not API DB — JIT sync.
+		if name == "" {
+			name = slug
+		}
+		return q.UpsertOrg(ctx, store.UpsertOrgParams{
+			AuthOrgID: authID,
+			Slug:      slug,
+			Name:      name,
+		})
+	}
+	return org, err
 }
 
 // OrgIDFromContext retrieves the resolved org ID from request context.

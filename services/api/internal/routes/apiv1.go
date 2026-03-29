@@ -9,7 +9,7 @@ import (
 func registerAPIv1(r *router.Router, d *Deps) error {
 	v1 := r.Group()
 	v1.Use(auth.Auth(d.JWTPubKey, d.JWTIssuer, d.Log))
-	v1.Use(auth.Scope(d.Log))
+	v1.Use(auth.Scope(d.Queries, d.Log))
 	v1.Use(ratelimit.RateLimit(d.RDB, ratelimit.RateLimitConfig{
 		MaxRequests: rateLimitAPI,
 		Window:      rateLimitWindow,

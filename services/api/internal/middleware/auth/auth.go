@@ -56,9 +56,13 @@ func Auth(pubKey ed25519.PublicKey, issuer string, log *zap.Logger) func(http.Ha
 }
 
 func extractToken(r *http.Request) string {
-	token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer ")
-	if !found {
-		return ""
+	// Prefer Authorization header (client-side requests, CLI tools).
+	if token, found := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); found {
+		return token
 	}
-	return token
+	// Fall back to HttpOnly cookie (browser requests from Next.js dashboard).
+	if cookie, err := r.Cookie("access_token"); err == nil && cookie.Value != "" {
+		return cookie.Value
+	}
+	return ""
 }

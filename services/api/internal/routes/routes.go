@@ -67,7 +67,7 @@ func Register(r *router.Router, d *Deps) error {
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   d.CORSOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowedHeaders:   []string{"Authorization", "Content-Type"},
+		AllowedHeaders:   []string{"Authorization", "Content-Type", "X-Org-Slug", "X-Org-ID", "X-Org-Name"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
