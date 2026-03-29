@@ -4,6 +4,7 @@ import "github.com/LegationPro/zagforge/shared/go/router"
 
 func repoSubroutes(d *Deps) []router.Subroute {
 	return []router.Subroute{
+		{Method: router.GET, Path: "/api/v1/repos", Handler: d.API.ListRepos},
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}", Handler: d.API.GetRepo},
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}/jobs", Handler: d.API.ListJobs},
 		{Method: router.GET, Path: "/api/v1/repos/{repoID}/jobs/{jobID}", Handler: d.API.GetJob},

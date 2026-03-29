@@ -45,9 +45,9 @@ type listItem struct {
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// Create generates a new CLI API key for the current org.
+// Create generates a new CLI API key for the current scope (personal or org).
 func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrgIDFromContext(r.Context())
+	ctx := r.Context()
 
 	body, err := httputil.DecodeJSON[struct {
 		Label string `json:"label"`
@@ -71,12 +71,18 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	hash := handlerpkg.SHA256Hash(raw)
 	hint := raw[:len(clitoken.CLIKeyPrefix)+4] + "..." + raw[len(raw)-4:]
 
-	key, err := h.db.Queries.InsertCLIAPIKey(r.Context(), store.InsertCLIAPIKeyParams{
-		OrgID:   orgID,
+	params := store.InsertCLIAPIKeyParams{
 		KeyHash: hash,
 		KeyHint: hint,
 		Label:   body.Label,
-	})
+	}
+	if auth.IsOrgScope(ctx) {
+		params.OrgID = auth.OrgIDFromContext(ctx)
+	} else {
+		params.UserID = auth.UserIDFromContext(ctx)
+	}
+
+	key, err := h.db.Queries.InsertCLIAPIKey(ctx, params)
 	if err != nil {
 		h.log.Error("insert cli key", zap.Error(err))
 		httputil.ErrResponse(w, http.StatusInternalServerError, handlerpkg.ErrInternal)
@@ -92,33 +98,41 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// List returns all CLI API keys for the current org (hints only, never raw keys).
+// List returns all CLI API keys for the current scope (hints only, never raw keys).
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrgIDFromContext(r.Context())
+	ctx := r.Context()
+	var items []listItem
 
-	keys, err := h.db.Queries.ListCLIAPIKeysByOrg(r.Context(), orgID)
-	if err != nil {
-		h.log.Error("list cli keys", zap.Error(err))
-		httputil.ErrResponse(w, http.StatusInternalServerError, handlerpkg.ErrInternal)
-		return
-	}
-
-	items := make([]listItem, len(keys))
-	for i, k := range keys {
-		items[i] = listItem{
-			ID:        k.ID.String(),
-			KeyHint:   k.KeyHint,
-			Label:     k.Label,
-			CreatedAt: k.CreatedAt.Time,
+	if auth.IsOrgScope(ctx) {
+		keys, err := h.db.Queries.ListCLIAPIKeysByOrg(ctx, auth.OrgIDFromContext(ctx))
+		if err != nil {
+			h.log.Error("list cli keys", zap.Error(err))
+			httputil.ErrResponse(w, http.StatusInternalServerError, handlerpkg.ErrInternal)
+			return
+		}
+		items = make([]listItem, len(keys))
+		for i, k := range keys {
+			items[i] = listItem{ID: k.ID.String(), KeyHint: k.KeyHint, Label: k.Label, CreatedAt: k.CreatedAt.Time}
+		}
+	} else {
+		keys, err := h.db.Queries.ListCLIAPIKeysByUser(ctx, auth.UserIDFromContext(ctx))
+		if err != nil {
+			h.log.Error("list cli keys", zap.Error(err))
+			httputil.ErrResponse(w, http.StatusInternalServerError, handlerpkg.ErrInternal)
+			return
+		}
+		items = make([]listItem, len(keys))
+		for i, k := range keys {
+			items[i] = listItem{ID: k.ID.String(), KeyHint: k.KeyHint, Label: k.Label, CreatedAt: k.CreatedAt.Time}
 		}
 	}
 
 	httputil.OkResponse(w, items)
 }
 
-// Delete revokes a CLI API key (must belong to caller's org).
+// Delete revokes a CLI API key (must belong to caller's scope).
 func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	orgID := auth.OrgIDFromContext(r.Context())
+	ctx := r.Context()
 
 	keyID, err := httputil.ParseUUID(r, "keyID")
 	if err != nil {
@@ -126,10 +140,16 @@ func (h *Handler) Delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.db.Queries.DeleteCLIAPIKeyForOrg(r.Context(), store.DeleteCLIAPIKeyForOrgParams{
-		ID:    keyID,
-		OrgID: orgID,
-	}); err != nil {
+	if auth.IsOrgScope(ctx) {
+		err = h.db.Queries.DeleteCLIAPIKeyForOrg(ctx, store.DeleteCLIAPIKeyForOrgParams{
+			ID: keyID, OrgID: auth.OrgIDFromContext(ctx),
+		})
+	} else {
+		err = h.db.Queries.DeleteCLIAPIKeyForUser(ctx, store.DeleteCLIAPIKeyForUserParams{
+			ID: keyID, UserID: auth.UserIDFromContext(ctx),
+		})
+	}
+	if err != nil {
 		h.log.Error("delete cli key", zap.Error(err))
 		httputil.ErrResponse(w, http.StatusInternalServerError, handlerpkg.ErrInternal)
 		return
