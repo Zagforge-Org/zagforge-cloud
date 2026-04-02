@@ -11,15 +11,14 @@ import (
 	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
 	handlerpkg "github.com/LegationPro/zagforge/api/internal/handler"
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
+	"github.com/LegationPro/zagforge/api/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 	store "github.com/LegationPro/zagforge/shared/go/store"
 )
 
 var (
-	errRepoNotFound      = errors.New("repository not found")
-	errInvalidExpiry     = errors.New("expires_at must be a valid RFC3339 timestamp")
-	errInvalidVisibility = errors.New("visibility must be public, private, or protected")
-	errAllowedUsersEmpty = errors.New("user_ids must not be empty")
+	errRepoNotFound  = errors.New("repository not found")
+	errInvalidExpiry = errors.New("expires_at must be a valid RFC3339 timestamp")
 )
 
 type createTokenResponse struct {
@@ -81,24 +80,21 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	body, err := httputil.DecodeJSON[struct {
 		Label        string   `json:"label"`
 		ExpiresAt    *string  `json:"expires_at"`
-		Visibility   string   `json:"visibility"`
+		Visibility   string   `json:"visibility" validate:"omitempty,oneof=public private protected"`
 		AllowedUsers []string `json:"allowed_users"`
 	}](r.Body)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
+		return
+	}
 
 	visibility := store.ContextVisibilityPublic
 	if body.Visibility != "" {
-		v := store.ContextVisibility(body.Visibility)
-		if v != store.ContextVisibilityPublic &&
-			v != store.ContextVisibilityPrivate &&
-			v != store.ContextVisibilityProtected {
-			httputil.ErrResponse(w, http.StatusBadRequest, errInvalidVisibility)
-			return
-		}
-		visibility = v
+		visibility = store.ContextVisibility(body.Visibility)
 	}
 
 	raw, err := generateToken()
@@ -175,14 +171,14 @@ func (h *Handler) UpdateAllowedUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body, err := httputil.DecodeJSON[struct {
-		UserIDs []string `json:"user_ids"`
+		UserIDs []string `json:"user_ids" validate:"required,min=1"`
 	}](r.Body)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if len(body.UserIDs) == 0 {
-		httputil.ErrResponse(w, http.StatusBadRequest, errAllowedUsersEmpty)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 

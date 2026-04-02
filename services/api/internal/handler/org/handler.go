@@ -13,6 +13,7 @@ import (
 	dbpkg "github.com/LegationPro/zagforge/api/internal/db"
 	handlerpkg "github.com/LegationPro/zagforge/api/internal/handler"
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
+	"github.com/LegationPro/zagforge/api/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 	"github.com/LegationPro/zagforge/shared/go/store"
 )
@@ -22,12 +23,8 @@ var (
 	errAlreadyMember = errors.New("user is already a member")
 	errUserNotFound  = errors.New("user not found")
 	errLastOwner     = errors.New("cannot remove the last owner")
-	errMissingFields = errors.New("name and slug are required")
-	errInvalidRole   = errors.New("role must be owner, admin, or member")
 	errCannotDemote  = errors.New("only owners can change owner roles")
 )
-
-var validRoles = []string{"owner", "admin", "member"}
 
 type Handler struct {
 	db  *dbpkg.DB
@@ -61,8 +58,8 @@ func (h *Handler) CreateOrg(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if body.Name == "" || body.Slug == "" {
-		httputil.ErrResponse(w, http.StatusBadRequest, errMissingFields)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -127,8 +124,8 @@ func (h *Handler) UpdateOrg(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if body.Name == "" || body.Slug == "" {
-		httputil.ErrResponse(w, http.StatusBadRequest, errMissingFields)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -215,17 +212,13 @@ func (h *Handler) InviteMember(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if body.Email == "" {
-		httputil.ErrResponse(w, http.StatusBadRequest, errors.New("email is required"))
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 	role := body.Role
 	if role == "" {
 		role = "member"
-	}
-	if !slices.Contains(validRoles, role) {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidRole)
-		return
 	}
 
 	invitee, err := h.db.Queries.GetUserByEmail(r.Context(), body.Email)
@@ -281,8 +274,8 @@ func (h *Handler) UpdateMemberRole(w http.ResponseWriter, r *http.Request) {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if !slices.Contains(validRoles, body.Role) {
-		httputil.ErrResponse(w, http.StatusBadRequest, errInvalidRole)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
@@ -431,15 +424,15 @@ func (h *Handler) audit(r *http.Request, userID, orgID pgtype.UUID, action strin
 }
 
 type orgRequest struct {
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	Name string `json:"name" validate:"required"`
+	Slug string `json:"slug" validate:"required"`
 }
 
 type inviteRequest struct {
-	Email string `json:"email"`
-	Role  string `json:"role"`
+	Email string `json:"email" validate:"required,email"`
+	Role  string `json:"role" validate:"omitempty,oneof=owner admin member"`
 }
 
 type roleRequest struct {
-	Role string `json:"role"`
+	Role string `json:"role" validate:"required,oneof=owner admin member"`
 }

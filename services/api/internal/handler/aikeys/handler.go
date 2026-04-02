@@ -1,7 +1,6 @@
 package aikeys
 
 import (
-	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -11,13 +10,9 @@ import (
 	handlerpkg "github.com/LegationPro/zagforge/api/internal/handler"
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
 	"github.com/LegationPro/zagforge/api/internal/service/encryption"
+	"github.com/LegationPro/zagforge/api/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 	store "github.com/LegationPro/zagforge/shared/go/store"
-)
-
-var (
-	errMissingFields = errors.New("provider and raw_key are required")
-	errKeyTooShort   = errors.New("raw_key must be at least 8 characters")
 )
 
 type Handler struct {
@@ -48,19 +43,15 @@ func (h *Handler) Upsert(w http.ResponseWriter, r *http.Request) {
 	orgID := auth.OrgIDFromContext(r.Context())
 
 	body, err := httputil.DecodeJSON[struct {
-		Provider string `json:"provider"`
-		RawKey   string `json:"raw_key"`
+		Provider string `json:"provider" validate:"required"`
+		RawKey   string `json:"raw_key" validate:"required,min=8"`
 	}](r.Body)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if body.Provider == "" || body.RawKey == "" {
-		httputil.ErrResponse(w, http.StatusBadRequest, errMissingFields)
-		return
-	}
-	if len(body.RawKey) < 8 {
-		httputil.ErrResponse(w, http.StatusBadRequest, errKeyTooShort)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 

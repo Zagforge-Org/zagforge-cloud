@@ -3,7 +3,6 @@ package clikeys
 import (
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -15,11 +14,10 @@ import (
 	handlerpkg "github.com/LegationPro/zagforge/api/internal/handler"
 	"github.com/LegationPro/zagforge/api/internal/middleware/auth"
 	"github.com/LegationPro/zagforge/api/internal/middleware/clitoken"
+	"github.com/LegationPro/zagforge/api/internal/validate"
 	"github.com/LegationPro/zagforge/shared/go/httputil"
 	"github.com/LegationPro/zagforge/shared/go/store"
 )
-
-var errLabelRequired = errors.New("label is required")
 
 type Handler struct {
 	db  *dbpkg.DB
@@ -50,14 +48,14 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	body, err := httputil.DecodeJSON[struct {
-		Label string `json:"label"`
+		Label string `json:"label" validate:"required"`
 	}](r.Body)
 	if err != nil {
 		httputil.ErrResponse(w, http.StatusBadRequest, handlerpkg.ErrInvalidBody)
 		return
 	}
-	if body.Label == "" {
-		httputil.ErrResponse(w, http.StatusBadRequest, errLabelRequired)
+	if err := validate.Struct(body); err != nil {
+		httputil.ErrResponse(w, http.StatusBadRequest, err)
 		return
 	}
 
