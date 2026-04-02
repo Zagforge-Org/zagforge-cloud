@@ -4,7 +4,7 @@ RUN go install github.com/air-verse/air@latest
 
 # Install zigzag from prebuilt release
 ARG TARGETARCH
-ARG ZIGZAG_VERSION=v0.15.1
+ARG ZIGZAG_VERSION=v0.18.0
 RUN set -eux; \
     case "${TARGETARCH}" in \
       amd64) ZIGZAG_ARCH="x86_64" ;; \
