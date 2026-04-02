@@ -1,12 +1,12 @@
 version: "3"
 
 vars:
-    COMPOSE_FILE: docker-compose.dev.yaml
+    COMPOSE_FILE: infra/docker-compose.dev.yaml
     DC: doppler run -- docker compose -f {{.COMPOSE_FILE}}
 
 includes:
     deploy:
-        taskfile: Taskfile.deploy.yml
+        taskfile: deploy/Taskfile.deploy.yml
 
 tasks:
     setup:
@@ -26,17 +26,17 @@ tasks:
     build:server:
         desc: Build the server binary
         cmds:
-            - "{{.DC}} run --rm --no-deps api go build -o .bin/server ./cmd/"
+            - "{{.DC}} run --rm --no-deps api go build -o .bin/server ./services/api/cmd/"
 
     build:worker:
         desc: Build the zagforge-worker wrapper binary
         cmds:
-            - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && go build -o .bin/zagforge-worker ./worker/cmd/'"
+            - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && go build -o .bin/zagforge-worker ./services/worker/cmd/'"
 
     test:
         desc: Run all tests with race detection
         cmds:
-            - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && go test -v -race -cover ./api/... ./shared/go/... ./worker/...'"
+            - "{{.DC}} run --rm --no-deps api sh -c 'cd /app && go test -v -race -cover ./services/api/... ./services/shared/go/... ./services/worker/...'"
 
     dev:
         desc: Start all services in dev mode (secrets from Doppler)
@@ -79,7 +79,7 @@ tasks:
             - >
                 docker compose -f {{.COMPOSE_FILE}} run --rm migrate
                 migrate
-                  -path /app/api/internal/db/migrations
+                  -path /app/services/api/internal/db/migrations
                   -database postgres://zagforge:zagforge@postgres:5432/zagforge?sslmode=disable
                   down 1
 
@@ -88,7 +88,7 @@ tasks:
         vars:
             NAME: '{{.NAME | default "change"}}'
         cmds:
-            - "docker compose -f {{.COMPOSE_FILE}} run --rm --no-deps api sh -c 'cd /app && migrate create -ext sql -dir api/internal/db/migrations -seq {{.NAME}}'"
+            - "docker compose -f {{.COMPOSE_FILE}} run --rm --no-deps api sh -c 'cd /app && migrate create -ext sql -dir services/api/internal/db/migrations -seq {{.NAME}}'"
 
     db:shell:
         desc: Open a psql shell to the local dev database
@@ -98,7 +98,7 @@ tasks:
     db:seed:
         desc: Seed dev database with test org and repo
         cmds:
-            - "docker compose -f {{.COMPOSE_FILE}} exec -T postgres psql -U zagforge -d zagforge -f /dev/stdin < api/internal/db/seed/dev.sql"
+            - "docker compose -f {{.COMPOSE_FILE}} exec -T postgres psql -U zagforge -d zagforge -f /dev/stdin < services/api/internal/db/seed/dev.sql"
 
     logs:
         desc: Tail logs for all services
@@ -115,7 +115,7 @@ tasks:
         cmds:
             - "docker compose -f {{.COMPOSE_FILE}} up -d postgres fake-gcs"
             - "docker compose -f {{.COMPOSE_FILE}} run --rm migrate"
-            - go test -tags=integration -race -v ./api/internal/integration/...
+            - go test -tags=integration -race -v ./services/api/internal/integration/...
         env:
             TEST_DATABASE_URL: postgres://zagforge:zagforge@localhost:5432/zagforge?sslmode=disable
             TEST_GCS_ENDPOINT: http://localhost:4443/storage/v1/

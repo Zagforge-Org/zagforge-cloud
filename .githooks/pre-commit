@@ -25,7 +25,7 @@ fi
 echo "✅ golangci-lint"
 
 # Run unit tests (excludes integration tests)
-if ! go test -race ./api/... ./shared/go/... ./worker/... 2>&1; then
+if ! go test -race ./services/api/... ./services/auth/... ./services/shared/go/... ./services/worker/... 2>&1; then
     echo ""
     echo "❌ tests: fix the failing tests before committing"
     exit 1

@@ -1,0 +1,17 @@
+DROP TABLE IF EXISTS webhook_deliveries;
+DROP TABLE IF EXISTS webhook_subscriptions;
+DROP TABLE IF EXISTS audit_logs;
+DROP TABLE IF EXISTS invites;
+DROP TABLE IF EXISTS team_memberships;
+DROP TABLE IF EXISTS teams;
+DROP TABLE IF EXISTS org_memberships;
+DROP TABLE IF EXISTS organizations;
+DROP TABLE IF EXISTS mfa_backup_codes;
+DROP TABLE IF EXISTS mfa_settings;
+DROP TABLE IF EXISTS failed_login_attempts;
+DROP TABLE IF EXISTS oauth_states;
+DROP TABLE IF EXISTS refresh_tokens;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS oauth_identities;
+DROP TABLE IF EXISTS users;
+DROP FUNCTION IF EXISTS set_updated_at();

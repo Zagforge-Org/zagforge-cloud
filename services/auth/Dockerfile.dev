@@ -1,0 +1,15 @@
+FROM golang:1.26.1-alpine
+RUN apk add --no-cache git
+RUN go install github.com/air-verse/air@latest
+RUN go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+
+WORKDIR /app
+COPY go.work go.work.sum ./
+COPY services/api/go.mod services/api/go.sum ./services/api/
+COPY services/auth/go.mod services/auth/go.su[m] ./services/auth/
+COPY services/worker/go.mod services/worker/go.su[m] ./services/worker/
+COPY services/shared/go/go.mod services/shared/go/go.sum ./services/shared/go/
+RUN go work sync
+COPY . .
+WORKDIR /app/services/auth
+CMD ["air"]

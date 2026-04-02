@@ -15,11 +15,23 @@ on:
 
 env:
   PROJECT_ID: zagforge
-  REGION: us-central1
   SERVICE: zagforge-worker
-  REGISTRY: us-central1-docker.pkg.dev/zagforge/zagforge
 
 jobs:
+  setup:
+    name: Resolve Region
+    runs-on: ubuntu-latest
+    outputs:
+      region: ${{ steps.region.outputs.region }}
+      registry: ${{ steps.region.outputs.registry }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: region
+        run: |
+          REGION=$(grep '^region' infra/terraform/envs/${{ inputs.environment }}.tfvars | sed 's/.*= *"\(.*\)"/\1/')
+          echo "region=$REGION" >> "$GITHUB_OUTPUT"
+          echo "registry=${REGION}-docker.pkg.dev/${{ env.PROJECT_ID }}/zagforge" >> "$GITHUB_OUTPUT"
+
   ci:
     name: CI Checks
     runs-on: ubuntu-latest
@@ -34,15 +46,15 @@ jobs:
         run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
       - name: Lint
-        run: golangci-lint run ./worker/... ./shared/go/...
+        run: golangci-lint run ./services/worker/... ./services/shared/go/...
 
       - name: Test
-        run: go test -race ./worker/... ./shared/go/...
+        run: go test -race ./services/worker/... ./services/shared/go/...
 
   deploy:
     name: Build & Deploy Worker (${{ inputs.environment }})
     runs-on: ubuntu-latest
-    needs: [ci]
+    needs: [ci, setup]
     environment: ${{ inputs.environment }}
     permissions:
       id-token: write
@@ -60,7 +72,7 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
 
       - name: Configure Docker for Artifact Registry
-        run: gcloud auth configure-docker ${{ env.REGION }}-docker.pkg.dev --quiet
+        run: gcloud auth configure-docker ${{ needs.setup.outputs.region }}-docker.pkg.dev --quiet
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -69,11 +81,11 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: worker/Dockerfile
+          file: services/worker/Dockerfile
           push: true
           tags: |
-            ${{ env.REGISTRY }}/worker:${{ github.sha }}
-            ${{ env.REGISTRY }}/worker:latest
+            ${{ needs.setup.outputs.registry }}/worker:${{ github.sha }}
+            ${{ needs.setup.outputs.registry }}/worker:latest
           cache-from: type=gha,scope=worker
           cache-to: type=gha,scope=worker,mode=max
           platforms: linux/amd64
@@ -85,6 +97,10 @@ jobs:
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_SERVICE_TOKEN }}
         run: |
+          if [ -z "$DOPPLER_TOKEN" ]; then
+            echo "::error::DOPPLER_SERVICE_TOKEN secret is not set. Add it in GitHub repo settings."
+            exit 1
+          fi
           SECRETS=$(doppler secrets download \
             --token "$DOPPLER_TOKEN" \
             --format env-no-quotes \
@@ -92,8 +108,12 @@ jobs:
             | grep -v '^DOPPLER_' \
             | grep -v '^PORT=' \
             | paste -sd, -)
+          if [ -z "$SECRETS" ]; then
+            echo "::error::Doppler returned no secrets. Check your service token."
+            exit 1
+          fi
           gcloud run services update ${{ env.SERVICE }} \
-            --region ${{ env.REGION }} \
+            --region ${{ needs.setup.outputs.region }} \
             --set-env-vars "$SECRETS" \
             --quiet
 
@@ -101,5 +121,5 @@ jobs:
         uses: google-github-actions/deploy-cloudrun@v2
         with:
           service: ${{ env.SERVICE }}
-          image: ${{ env.REGISTRY }}/worker:${{ github.sha }}
-          region: ${{ env.REGION }}
+          image: ${{ needs.setup.outputs.registry }}/worker:${{ github.sha }}
+          region: ${{ needs.setup.outputs.region }}

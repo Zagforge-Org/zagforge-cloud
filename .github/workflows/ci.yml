@@ -21,7 +21,7 @@ jobs:
         run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
       - name: Run golangci-lint
-        run: golangci-lint run ./api/... ./shared/go/... ./worker/...
+        run: golangci-lint run ./services/api/... ./services/auth/... ./services/shared/go/... ./services/worker/...
 
   test:
     name: Test
@@ -34,7 +34,7 @@ jobs:
           go-version: "1.26.1"
 
       - name: Run tests
-        run: go test -race -cover -coverprofile=coverage.out ./api/... ./shared/go/... ./worker/...
+        run: go test -race -cover -coverprofile=coverage.out ./services/api/... ./services/auth/... ./services/shared/go/... ./services/worker/...
 
       - name: Upload coverage
         uses: actions/upload-artifact@v4
@@ -50,11 +50,15 @@ jobs:
       matrix:
         target:
           - name: api
-            dockerfile: api/Dockerfile
+            dockerfile: services/api/Dockerfile
+          - name: auth
+            dockerfile: services/auth/Dockerfile
           - name: worker
-            dockerfile: worker/Dockerfile
+            dockerfile: services/worker/Dockerfile
           - name: migrate
-            dockerfile: api/Dockerfile.migrate
+            dockerfile: services/api/Dockerfile.migrate
+          - name: auth-migrate
+            dockerfile: services/auth/Dockerfile.migrate
     steps:
       - uses: actions/checkout@v4
 

@@ -1,0 +1,20 @@
+environment          = "prod"
+github_repo          = "LegationPro/zagforge-cloud"
+project_id           = "zagforge"
+region               = "europe-west1"
+database_provider    = "cloudsql"
+cloud_sql_tier       = "db-custom-2-8192"
+redis_provider       = "memorystore"
+redis_memory_gb      = 2
+api_min_instances    = 1
+api_max_instances    = 10
+cloud_armor_enabled  = true
+github_app_id        = "3122231"
+github_app_slug      = "zagforge-zigzag-dev"
+cors_allowed_origins = "https://zagforge.com"
+domain               = "api.zagforge.com"
+
+# Auth
+auth_url           = "https://auth.zagforge.com"
+auth_min_instances = 1
+auth_max_instances = 5
